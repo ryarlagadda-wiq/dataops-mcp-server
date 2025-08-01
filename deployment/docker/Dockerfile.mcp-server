@@ -11,7 +11,7 @@
 # limitations under the License.
 
 # ===== Build Stage =====
-FROM python:3.11-alpine3.19 AS builder
+FROM python:3.11-alpine3.19@sha256:2f2e85db1c0d8d6f6e2f0c12e05f300c1352b4e2e4a5443ce3a3b624b14d7950 AS builder
 
 # Install build dependencies
 RUN apk add --no-cache build-base gcc musl-dev libffi-dev openssl-dev cargo
@@ -46,7 +46,7 @@ RUN uv sync --python 3.11 --frozen --no-dev --no-editable && \
     python -m compileall /app
 
 # ===== Runtime Stage =====
-FROM python:3.11-alpine3.19
+FROM python:3.11-alpine3.19@sha256:2f2e85db1c0d8d6f6e2f0c12e05f300c1352b4e2e4a5443ce3a3b624b14d7950
 
 # Create user for security
 RUN addgroup -S app & adduser -S app -G app -h /app
