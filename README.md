@@ -9,7 +9,7 @@
 
 **GCP Client Requirements**
 1. **Credentials**: Configure GCP credentials via gcloud CLI or environment variables
-2. **Permissions**: Ensure your GCP credentials have the required permissions (see Permissions section)
+2. **Permissions**: Ensure your GCP credentials have the required permissions (see [Permissions](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/permissions.md))
 * Optional: GitHub token for PR automation, Slack webhook for notifications
 
 
