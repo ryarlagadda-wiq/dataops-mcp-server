@@ -9,13 +9,13 @@ AI assistants can leverage this MCP server. To understand more check out the [AI
 The MCP server exposes GCP project data and analysis tools to AI assistants and MCP clients:
 
 ```bash
-python -m quantium.gcp_cost_optimization_mcp.server [--profile your-profile] [--region australia-south-east-1]
+python src/mcp_servers/server.py [--profile your-profile] [--region australia-south-east-1]
 ```
 
 The server runs in the foreground by default. To run it in the background, you can use:
 
 ```bash
-python quantium.gcp_cost_optimization_mcp.server &
+python src/mcp_servers/server.py &
 ```
 
 # GCP Cost Optimization MCP Usage Guide
