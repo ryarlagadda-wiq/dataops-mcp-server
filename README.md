@@ -5,7 +5,7 @@
 ### Prerequisites
 * The uv Python package and project manager from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
 * A GCP account
-* Configured GCP credentials
+* Configured [GCP credentials](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/gcp-config.md)
 * Install [gcloud CLI](https://cloud.google.com/sdk/docs/install-sdk) for authentication
 
 **GCP Client Requirements**
