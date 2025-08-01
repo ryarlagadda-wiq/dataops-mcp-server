@@ -1,17 +1,39 @@
 # GCP Cost Optimization Multi-Agent MCP Server
 
-## Prerequisites
+## 🚀 Installation
 
-**Installation Requirements**
-1. Install uv from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
-2. Install Python 3.10 or newer using `uv python install 3.10` (or a more recent version)
-3. Install [gcloud CLI](https://cloud.google.com/sdk/docs/install-sdk) for authentication
+### Prerequisites
+* The uv Python package and project manager from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
+* A GCP account
+* Configured GCP credentials
+* Install [gcloud CLI](https://cloud.google.com/sdk/docs/install-sdk) for authentication
 
 **GCP Client Requirements**
 1. **Credentials**: Configure GCP credentials via gcloud CLI or environment variables
 2. **Permissions**: Ensure your GCP credentials have the required permissions (see [Permissions](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/permissions.md))
 * Optional: GitHub token for PR automation, Slack webhook for notifications
 
+## Local development
+
+To make changes to this MCP locally and run it:
+   ```bash
+   # Clone this repository
+   git clone https://github.com/quantium/gcp-cost-optimization-mcp.git
+   cd gcp-cost-optimization-mcp
+
+   # Create a virtual environment and install dependencies
+   uv sync
+   source .venv/bin/activate # On Windows, use `.venv\Scripts\activate`
+   ```
+
+## 🚦 Quick Start
+1. Make sure to have configured your GCP credentials as [described here](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/gcp-config.md)
+2. Update your `claude_desktop_config.json` file with proper configuration outlined in the [AI integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md)
+3. Open Claude for Desktop and start prompting!
+For more examples and advanced usage, see the [detailed usage guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/usage.md).
+
+## 🤖 AI Integration
+To get started using this MCP server with your AI assistants offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
 
 ## Cost Optimization MCP Server configuration options
 ### `--allow-write`
@@ -37,32 +59,7 @@ Multi-agent features:
 - QueryOptimizer Agent: Expert in SQL optimization and performance tuning
 - SLA Sentinel Agent: Focused on SLA compliance and data freshness monitoring
 - Automation Agent: Handles GitHub, Slack, and workflow integrations
-
-## Local development
-
-To make changes to this MCP locally and run it:
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/quantium/gcp-cost-optimization-mcp.git
-   cd gcp-cost-optimization-mcp
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -e .
-   ```
-
-3. Configure GCP credentials:
-  - Ensure you have GCP credentials configured with `gcloud auth application-default login`
-  - You can also set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to point to a service account key
-
-4. Run the server:
-   ```bash
-    python -m quantium.gcp_cost_optimization_mcp.server
-   ```
-
-5. To get started using this MCP server with your AI clients offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
+  
 
 ## Environment variables
 By default, the server uses Application Default Credentials and the default GCP project. However, the server can be configured through environment variables in the MCP configuration:
