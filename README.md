@@ -262,7 +262,7 @@ Analyzes costs associated with dbt models and provides optimization recommendati
 This tool examines dbt model execution costs, dependency impacts, and suggests
 materialization strategy improvements for cost efficiency.
 
-** Parameters:**
+**Parameters:**
 - `model_path` (optional): Specific dbt model to analyze (analyzes all models if not specified)
 - `include_dependencies` (default: true): Include downstream model impact analysis
 - `materialization_analysis` (default: true): Analyze materialization strategy costs
