@@ -22,7 +22,7 @@
     "gcp-cost-optimization": {
       "command": "uvx",
       "args": [
-        "quantium.gcp-cost-optimization-mcp@latest",
+        "rohithay.dataops-mcp-server@latest",
         "--allow-write",
         "--allow-sensitive-data-access"
       ],
@@ -44,7 +44,7 @@
   "mcpServers": {
     "gcp-cost-optimization": {
       "command": "uvx",
-      "args": ["quantium.gcp-cost-optimization-mcp@latest"],
+      "args": ["rohithay.dataops-mcp-server@latest"],
       "env": {
         "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/service-account.json",
         "GCP_PROJECT_ID": "your-gcp-project",
