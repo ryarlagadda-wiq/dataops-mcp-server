@@ -75,25 +75,7 @@ By default, the server uses Application Default Credentials and the default GCP 
 - `OPTIMIZATION_MIN_SAVINGS`: Minimum savings threshold for creating PRs in USD (default: 50)
 - `MCP_LOG_LEVEL`: Logging level (ERROR, WARNING, INFO, DEBUG)
 
-## Available resources
-The server provides the following resources:
-
-### Cost resources
-- `cost://daily/{date}`: Daily cost breakdown for a specific date in JSON format
-- `cost://monthly/{month}`: Monthly cost summary with trends and comparisons
-- `cost://project/{project_id}`: Project-level cost analysis and attribution
-
-### Query resources
-- `query://expensive/{days}`: List of most expensive queries over the last N days
-- `query://patterns/{hash}`: Analysis of similar query patterns and optimization opportunities
-- `query://optimization/{query_id}`: Detailed optimization recommendations for a specific query
-
-### Agent resources
-- `agent://insights/{agent_name}`: Latest insights and recommendations from a specific agent
-- `agent://status/all`: Status and health of all active agents
-- `agent://reports/{report_type}`: Generated reports from agent analysis
-
-## Available tools
+## Tools
 The server exposes cost optimization capabilities as tools:
 
 ### get_bigquery_costs
