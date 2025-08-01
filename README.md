@@ -18,8 +18,8 @@
 To make changes to this MCP locally and run it:
    ```bash
    # Clone this repository
-   git clone https://github.com/quantium/gcp-cost-optimization-mcp.git
-   cd gcp-cost-optimization-mcp
+   git clone https://github.com/rohithay/dataops-mcp-server.git
+   cd dataops-mcp-server
 
    # Create a virtual environment and install dependencies
    uv sync
