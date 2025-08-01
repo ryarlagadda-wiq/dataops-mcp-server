@@ -62,7 +62,7 @@ To make changes to this MCP locally and run it:
     python -m quantium.gcp_cost_optimization_mcp.server
    ```
 
-5. To get started using this MCP server with your AI clients offering MCP support, like Claude Desktop, Cursor. Refer to this [guide].
+5. To get started using this MCP server with your AI clients offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
 
 ## Environment variables
 By default, the server uses Application Default Credentials and the default GCP project. However, the server can be configured through environment variables in the MCP configuration:
