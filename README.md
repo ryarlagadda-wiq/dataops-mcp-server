@@ -1,11 +1,15 @@
 # GCP Cost Optimization Multi-Agent MCP Server
 
 ## Prerequisites
-* Have a GCP account with Application Default Credentials configured
-* Install uv from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
-* Install Python 3.10 or newer using `uv python install 3.10` (or a more recent version)
-* Have access to BigQuery projects with cost data (requires `bigquery.jobs.list permission`)
-* Install [gcloud CLI](https://cloud.google.com/sdk/docs/install-sdk) for authentication
+
+**Installation Requirements**
+1. Install uv from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
+2. Install Python 3.10 or newer using `uv python install 3.10` (or a more recent version)
+3. Install [gcloud CLI](https://cloud.google.com/sdk/docs/install-sdk) for authentication
+
+**GCP Client Requirements**
+1. **Credentials**: Configure GCP credentials via gcloud CLI or environment variables
+2. **Permissions**: Ensure your GCP credentials have the required permissions (see Permissions section)
 * Optional: GitHub token for PR automation, Slack webhook for notifications
 
 
