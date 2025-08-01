@@ -35,7 +35,7 @@ For more examples and advanced usage, see the [detailed usage guide](https://git
 ## 🤖 AI Integration
 To get started using this MCP server with your AI assistants offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
 
-# Available Tools (10)
+# Available Tools
 
 Tools provided by this Server | Short Description
 ---|---
