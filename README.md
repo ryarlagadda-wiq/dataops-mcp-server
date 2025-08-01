@@ -35,116 +35,149 @@ For more examples and advanced usage, see the [detailed usage guide](https://git
 ## 🤖 AI Integration
 To get started using this MCP server with your AI assistants offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
 
-## Tools
-The server exposes cost optimization capabilities as tools:
+# Available Tools (10)
 
-### get_bigquery_costs
-Retrieves comprehensive BigQuery cost analysis for specified time periods.
-This tool provides detailed cost breakdowns by project, dataset, user, and query type.
-Use this tool to understand spending patterns and identify cost optimization opportunities.
+Tools provided by this Server | Short Description
+---|---
+`get_bigquery_costs` | Retrieve BigQuery cost breakdowns by date, project, user, dataset, etc.
+`analyze_query_cost` | Predict query cost before execution and get AI-based optimization suggestions
+`detect_cost_anomalies` | Detect unusual spending using ML and get early budget overrun alerts
+`optimize_query` | Use LLMs to auto-optimize SQL queries with explanations and savings estimates
+`create_optimization_pr` | Auto-generate GitHub PRs with cost-saving SQL and tests
+`send_cost_alert` | Send cost alerts to Slack with context and recommended actions
+`get_dbt_model_costs` | Analyze dbt model costs and suggest materialization improvements
+`monitor_sla_compliance` | Track SLA compliance and cost-performance trade-offs
+`forecast_costs` | Forecast future costs and recommend budget plans
+`slack_post_message` | Post a new message to a Slack channel (shared Slack tool)
 
-**Parameters:**
-- `days` (default: 7): Number of days to analyze (1-90)
-- `project_id` (optional): Specific GCP project ID (uses default if not specified)
-- `include_predictions` (default: true): Include ML-based cost forecasting
-- `group_by` (default: ["date"]): Grouping dimensions (date, user, dataset, query_type)
-- `include_query_details` (default: false): Include individual query cost breakdowns
+---
 
-### analyze_query_cost
-Analyzes the cost impact of a SQL query before execution using BigQuery's dry-run API.
-This tool predicts query costs, identifies optimization opportunities, and provides
-AI-powered suggestions for improving query performance and reducing costs.
+## Tools Details
 
-**Parameters:**
-- `sql` (required): SQL query to analyze
-- `project_id` (optional): GCP project ID for query analysis
-- `include_optimization` (default: true): Include AI-powered optimization suggestions
-- `optimization_model` (default: "claude"): AI model to use for optimization ("claude", "gpt-4")
-- `create_pr_if_savings` (default: false): Automatically create GitHub PR if savings > threshold
+### Tool: `get_bigquery_costs`
+Retrieve comprehensive BigQuery cost analysis for specified time periods.
 
-### detect_cost_anomalies
-Identifies unusual cost patterns and spending spikes using machine learning models.
-This tool analyzes historical cost data to detect anomalies, predict budget overruns,
-and provide early warning alerts for unexpected cost increases.
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `days` | number (default: 7) | Number of days to analyze (1–90) |
+| `project_id` | string (optional) | Specific GCP project ID |
+| `include_predictions` | boolean (default: true) | Include ML-based cost forecasting |
+| `group_by` | array (default: ["date"]) | Grouping dimensions (date, user, dataset, query_type) |
+| `include_query_details` | boolean (default: false) | Include individual query cost breakdowns |
 
-**Parameters:**
-- `days` (default: 30): Historical period to analyze for anomaly detection
-- `sensitivity` (default: "medium"): Anomaly detection sensitivity (low, medium, high)
-- `project_id` (optional): Specific project to analyze (analyzes all accessible projects if not specified)
-- `alert_threshold` (default: 0.25): Percentage increase threshold for alerts (0.25 = 25%)
-- `send_slack_alert` (default: false): Send Slack notification for detected anomalies
+---
 
-### optimize_query
-Provides AI-powered query optimization using Large Language Models.
-This tool takes a SQL query and returns an optimized version with detailed explanations
-of changes made and estimated cost savings. Supports integration with dbt workflows.
+### Tool: `analyze_query_cost`
+Predict cost of a SQL query before execution and get optimization suggestions.
 
-**Parameters:**
-- `sql` (required): SQL query to optimize
-- `optimization_goals` (default: ["cost", "performance"]): Optimization objectives
-- `preserve_results` (default: true): Ensure optimized query returns identical results
-- `include_explanation` (default: true): Include detailed explanation of optimizations
-- `target_savings_pct` (default: 30): Target cost reduction percentage
-- `dbt_model_path` (optional): Path to dbt model file for context
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `sql` | string (required) | SQL query to analyze |
+| `project_id` | string (optional) | GCP project ID |
+| `include_optimization` | boolean (default: true) | Include AI-powered optimization suggestions |
+| `optimization_model` | string (default: "claude") | Model to use ("claude", "gpt-4") |
+| `create_pr_if_savings` | boolean (default: false) | Create GitHub PR if savings exceed threshold |
 
-### create_optimization_pr
-Creates a GitHub pull request with query optimizations and cost reduction implementations.
-This tool automatically generates optimized SQL, creates appropriate file changes,
-and submits a PR with detailed cost analysis and testing instructions.
+---
 
-**Parameters:**
-- `optimization_id` (required): ID from previous optimization analysis
-- `repository` (default: "data-platform"): GitHub repository name
-- `base_branch` (default: "main"): Base branch for the pull request
-- `title_prefix` (default: "🚀 Cost Optimization"): PR title prefix
-- `assign_reviewers` (default: true): Automatically assign relevant reviewers
-- `include_tests` (default: true): Generate validation tests for optimizations
+### Tool: `detect_cost_anomalies`
+Use ML to detect cost spikes, anomalies, and early signs of overruns.
 
-### send_cost_alert
-Sends intelligent cost alerts to Slack with rich context and remediation suggestions.
-This tool formats cost anomalies, optimization opportunities, and budget warnings
-into actionable Slack messages with appropriate urgency and stakeholder targeting.
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `days` | number (default: 30) | Historical days to analyze |
+| `sensitivity` | string (default: "medium") | Sensitivity (low, medium, high) |
+| `project_id` | string (optional) | GCP project ID |
+| `alert_threshold` | number (default: 0.25) | Alert threshold (e.g., 0.25 = 25% increase) |
+| `send_slack_alert` | boolean (default: false) | Send alert to Slack |
 
-**Parameters:**
-- `alert_type` (required): Type of alert (anomaly, budget_warning, optimization_opportunity)
-- `cost_data` (required): Cost analysis data to include in alert
-- `severity` (default: "medium"): Alert severity level (low, medium, high, critical)
-- `channel` (default: "#data-ops-alerts"): Slack channel for notification
-- `mention_users` (default: []): List of users to mention in the alert
-- `include_remediation` (default: true): Include suggested remediation steps
+---
 
-### get_dbt_model_costs
-Analyzes costs associated with dbt models and provides optimization recommendations.
-This tool examines dbt model execution costs, dependency impacts, and suggests
-materialization strategy improvements for cost efficiency.
+### Tool: `optimize_query`
+LLM-powered query optimization with cost-saving recommendations.
 
-**Parameters:**
-- `model_path` (optional): Specific dbt model to analyze (analyzes all models if not specified)
-- `include_dependencies` (default: true): Include downstream model impact analysis
-- `materialization_analysis` (default: true): Analyze materialization strategy costs
-- `days` (default: 7): Historical period for cost analysis
-- `suggest_optimizations` (default: true): Include optimization recommendations
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `sql` | string (required) | SQL query to optimize |
+| `optimization_goals` | array (default: ["cost", "performance"]) | Objectives for optimization |
+| `preserve_results` | boolean (default: true) | Ensure results are unchanged |
+| `include_explanation` | boolean (default: true) | Include explanation of changes |
+| `target_savings_pct` | number (default: 30) | Target savings percentage |
+| `dbt_model_path` | string (optional) | Path to dbt model for context |
 
-### monitor_sla_compliance
-Monitors data pipeline SLA compliance and correlates with cost efficiency metrics.
-This tool tracks query latency, data freshness, and pipeline success rates while
-analyzing the cost-performance trade-offs of different optimization strategies.
+---
 
-**Parameters:**
-- `sla_type` (default: "all"): SLA category to monitor (latency, freshness, success_rate, all)
-- `time_window` (default: "24h"): Time window for SLA analysis
-- `include_cost_correlation` (default: true): Correlate SLA metrics with cost data
-- `alert_on_breach` (default: false): Send alert for SLA violations
-- `optimization_suggestions` (default: true): Include cost-aware optimization suggestions
+### Tool: `create_optimization_pr`
+Auto-create GitHub PRs with optimized SQL and validation tests.
 
-### forecast_costs
-Provides ML-powered cost forecasting and budget planning recommendations.
-This tool uses historical data patterns, seasonality analysis, and growth trends
-to predict future costs and suggest budget allocations and cost controls.
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `optimization_id` | string (required) | Optimization analysis ID |
+| `repository` | string (default: "data-platform") | GitHub repo name |
+| `base_branch` | string (default: "main") | Base branch for the PR |
+| `title_prefix` | string (default: "🚀 Cost Optimization") | Prefix for PR title |
+| `assign_reviewers` | boolean (default: true) | Auto-assign reviewers |
+| `include_tests` | boolean (default: true) | Generate validation tests |
 
-**Parameters:**
-- `forecast_days` (default: 30): Number of days to forecast
-- `include_confidence_intervals` (default: true): Include prediction confidence ranges
-- `breakdown_by` (default: ["service"]): Forecast breakdown dimensions
-- `scenario_analysis` (default: false): Include optimistic/pessimistic scenarios
-- `budget_recommendations` (default: true): Include budget planning suggestions
+---
+
+### Tool: `send_cost_alert`
+Send actionable cost alerts to Slack with rich context.
+
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `alert_type` | string (required) | Type of alert (anomaly, budget_warning, optimization_opportunity) |
+| `cost_data` | object (required) | Data to include in the alert |
+| `severity` | string (default: "medium") | Alert severity level |
+| `channel` | string (default: "#data-ops-alerts") | Slack channel for alert |
+| `mention_users` | array (default: []) | Users to mention |
+| `include_remediation` | boolean (default: true) | Include fix suggestions |
+
+---
+
+### Tool: `get_dbt_model_costs`
+Analyze dbt model execution costs and optimization opportunities.
+
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `model_path` | string (optional) | Specific dbt model path |
+| `include_dependencies` | boolean (default: true) | Analyze downstream impacts |
+| `materialization_analysis` | boolean (default: true) | Suggest materialization strategy improvements |
+| `days` | number (default: 7) | Time period for analysis |
+| `suggest_optimizations` | boolean (default: true) | Include cost-saving suggestions |
+
+---
+
+### Tool: `monitor_sla_compliance`
+Monitor pipeline SLAs and correlate with cost-performance metrics.
+
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `sla_type` | string (default: "all") | SLA type (latency, freshness, success_rate, all) |
+| `time_window` | string (default: "24h") | Time window for analysis |
+| `include_cost_correlation` | boolean (default: true) | Link SLA with cost data |
+| `alert_on_breach` | boolean (default: false) | Send alerts for SLA breaches |
+| `optimization_suggestions` | boolean (default: true) | Suggest cost-aware fixes |
+
+---
+
+### Tool: `forecast_costs`
+Forecast future GCP spend using ML and scenario modeling.
+
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `forecast_days` | number (default: 30) | Days to forecast |
+| `include_confidence_intervals` | boolean (default: true) | Include prediction ranges |
+| `breakdown_by` | array (default: ["service"]) | Forecast by (e.g., service, project) |
+| `scenario_analysis` | boolean (default: false) | Include optimistic/pessimistic forecasts |
+| `budget_recommendations` | boolean (default: true) | Suggest budget allocations |
+
+---
+
+### Tool: `slack_post_message`
+Post a message to a Slack channel.
+
+| Parameters | Type     | Description |
+|------------|----------|-------------|
+| `channel_id` | string | ID of the Slack channel |
+| `text` | string | Message text to post |
