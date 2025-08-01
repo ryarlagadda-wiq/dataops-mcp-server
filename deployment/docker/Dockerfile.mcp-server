@@ -66,4 +66,4 @@ ENV PYTHONUNBUFFERED=1
 USER app
 
 # Entrypoint for MCP server
-ENTRYPOINT ["python", "-m", "quantium.gcp_cost_optimization_mcp.server"]
+ENTRYPOINT ["python", "-m", "rohithay.cloud-dataops-mcp-server"]
