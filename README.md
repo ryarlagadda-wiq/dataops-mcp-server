@@ -59,21 +59,6 @@ Multi-agent features:
 - QueryOptimizer Agent: Expert in SQL optimization and performance tuning
 - SLA Sentinel Agent: Focused on SLA compliance and data freshness monitoring
 - Automation Agent: Handles GitHub, Slack, and workflow integrations
-  
-
-## Environment variables
-By default, the server uses Application Default Credentials and the default GCP project. However, the server can be configured through environment variables in the MCP configuration:
-
-- `GCP_PROJECT_ID`: GCP project ID to use for cost analysis
-- `GCP_REGION`: GCP region for regional resources (default: `us-central1`)
-- `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account key file (alternative to ADC)
-- `CLAUDE_API_KEY`: Anthropic API key for AI-powered query optimization (optional)
-- `GITHUB_TOKEN`: GitHub personal access token for PR automation (optional)
-- `SLACK_WEBHOOK_URL`: Slack webhook URL for cost notifications (optional)
-- `ENABLE_MULTI_AGENT`: Enable multi-agent architecture (default: false)
-- `COST_ALERT_THRESHOLD`: Daily cost threshold for alerts in USD (default: 1000)
-- `OPTIMIZATION_MIN_SAVINGS`: Minimum savings threshold for creating PRs in USD (default: 50)
-- `MCP_LOG_LEVEL`: Logging level (ERROR, WARNING, INFO, DEBUG)
 
 ## Tools
 The server exposes cost optimization capabilities as tools:
