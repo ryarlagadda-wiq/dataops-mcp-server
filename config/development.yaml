@@ -1,1 +1,35 @@
+project:
+  id: "your-gcp-project"
+  region: "us-central1"
+  billing_account: "your-billing-account-id"
 
+thresholds:
+  daily_cost_alert: 1000.0      # USD
+  query_cost_warning: 50.0      # USD per query
+  anomaly_sensitivity: "medium"  # low, medium, high
+  
+optimization:
+  min_savings_for_pr: 100.0     # USD monthly savings
+  auto_optimize_threshold: 25.0  # USD per query
+  max_risk_level: "medium"      # low, medium, high
+
+integrations:
+  github:
+    repository: "quantium/data-platform"
+    default_reviewers: ["data-engineering-team"]
+  slack:
+    default_channel: "#data-ops-alerts"
+    critical_channel: "#data-ops-critical"
+  
+agents:
+  cost_guard:
+    enabled: true
+    monitoring_interval: 300    # seconds
+    auto_alert: true
+  query_optimizer:
+    enabled: true
+    auto_optimize: false
+    ai_model: "claude-3-sonnet"
+  sla_sentinel:
+    enabled: true
+    sla_threshold: 0.95
