@@ -9,54 +9,6 @@
 * Optional: GitHub token for PR automation, Slack webhook for notifications
 
 
-## Installation
-| Cursor | VS Code |
-|:------:|:-------:|
-
-You can download the GCP Cost Optimization MCP Server from GitHub. To get started using your favorite AI assistant with MCP support, like Claude Desktop, Cursor.
-
-Add the following code to your MCP client configuration. The GCP Cost Optimization MCP server uses the default GCP project from your ADC by default. Specify a value in `GCP_PROJECT_ID` if you want to use a different project. Similarly, adjust the `GCP_REGION` configuration values as per your setup.
-```json
-{
-  "mcpServers": {
-    "gcp-cost-optimization": {
-      "command": "uvx",
-      "args": [
-        "quantium.gcp-cost-optimization-mcp@latest",
-        "--allow-write",
-        "--allow-sensitive-data-access"
-      ],
-      "env": {
-        "GCP_PROJECT_ID": "your-gcp-project",
-        "GCP_REGION": "us-central1",
-        "ENABLE_MULTI_AGENT": "true"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
-```
-
-## Using service account credentials
-```json
-{
-  "mcpServers": {
-    "gcp-cost-optimization": {
-      "command": "uvx",
-      "args": ["quantium.gcp-cost-optimization-mcp@latest"],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/service-account.json",
-        "GCP_PROJECT_ID": "your-gcp-project",
-        "GCP_REGION": "us-central1"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
-```
-
 ## Cost Optimization MCP Server configuration options
 ### `--allow-write`
 Enables write access mode, which allows mutating operations like creating GitHub PRs, sending Slack notifications, and deploying optimization changes. By default, the server runs in read-only mode, which restricts operations to only perform cost analysis and query examination, preventing any changes to external systems.
