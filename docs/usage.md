@@ -20,7 +20,7 @@ python quantium.gcp_cost_optimization_mcp.server &
 
 # GCP Cost Optimization MCP Usage Guide
 
-## 📟 CLI Client (one off usage)
+## 📟 CLI Client
 
 The project includes a command-line client for interacting with the MCP server:
 
