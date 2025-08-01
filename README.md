@@ -62,23 +62,7 @@ To make changes to this MCP locally and run it:
     python -m quantium.gcp_cost_optimization_mcp.server
    ```
 
-5. To use this MCP server with AI clients, add the following to your MCP configuration:
-```json
-{
-  "mcpServers": {
-    "gcp-cost-optimization": {
-      "command": "python",
-      "args": ["-m", "quantium.gcp_cost_optimization_mcp.server"],
-      "env": {
-        "GCP_PROJECT_ID": "your-gcp-project",
-        "GCP_REGION": "us-central1"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
-```
+5. To get started using this MCP server with your AI clients offering MCP support, like Claude Desktop, Cursor. Refer to this [guide].
 
 ## Environment variables
 By default, the server uses Application Default Credentials and the default GCP project. However, the server can be configured through environment variables in the MCP configuration:
