@@ -1,1 +1,69 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+# ===== Build Stage =====
+FROM python:3.11-alpine3.19 AS builder
+
+# Install build dependencies
+RUN apk add --no-cache build-base gcc musl-dev libffi-dev openssl-dev cargo
+
+# Set working directory
+WORKDIR /app
+
+# Enable bytecode compilation for faster startup
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_PREFERENCE=only-system
+ENV UV_FROZEN=true
+
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock uv-requirements.txt ./
+
+# Install uv
+RUN pip install --upgrade pip && pip install uv
+
+# Install Python dependencies using lockfile
+RUN uv sync --python 3.11 --frozen --no-install-project --no-dev --no-editable
+
+# Copy the rest of the project source code
+COPY . /app
+
+# Install project
+RUN  uv sync --python 3.11 --frozen --no-dev --no-editable && \
+     python -m compileall /app
+
+# Install project
+RUN uv sync --python 3.11 --frozen --no-dev --no-editable && \
+    python -m compileall /app
+
+# ===== Runtime Stage =====
+FROM python:3.11-alpine3.19
+
+# Create user for security
+RUN addgroup -S app & adduser -S app -G app -h /app
+
+# Set working directory and permissions
+WORKDIR /app
+COPY --form=builder --chown=app:app /app /app
+
+# Install runtime dependencies only
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
+# Set environment
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+# Switch to non-root user
+USER app
+
+# Entrypoint for MCP server
+ENTRYPOINT ["python", "-m", "quantium.gcp_cost_optimization_mcp.server"]
