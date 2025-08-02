@@ -78,8 +78,8 @@ class Settings(BaseSettings):
     ENABLE_DETAILED_LOGGING: bool = False
 
     class Config:
-        yaml_file = "development.yaml"
-        yaml_file_encoding = "utf-8"
+        env_file = ".env"
+        env_file_encoding = "utf-8"
         extra = "allow"
         case_sensitive = False
 
