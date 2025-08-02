@@ -29,113 +29,96 @@ MANIFEST
 *.manifest
 *.spec
 
-# Unit test / coverage reports
+# Testing and coverage
 htmlcov/
 .tox/
 .nox/
 .coverage
 .coverage.*
 .cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
 .pytest_cache/
+.hypothesis/
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Environments
+# Virtual environments
 .env
 .venv
 env/
 venv/
 
-# mkdocs documentation
-/site
+# Package managers
+.uv/
+__pypackages__/
 
-# mypy
+# Type checkers
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Pyre type checker
 .pyre/
-
-# pytype static type analyzer
 .pytype/
 
-# VS Code
+# IDEs and editors
 .vscode/
 *.code-workspace
+.idea/
+*~
+*.swp
+*.swo
 
-# Google Cloud Platform
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Google Cloud
 *.json
 !pyproject.toml
-# Uncomment if you want to include specific config files:
-# !*config*.json
-
-# Service account keys (NEVER commit these)
 *service-account*.json
 *credentials*.json
 *key*.json
 *.p12
 *.pem
-
-# Google Cloud SDK
 .gcloud/
 .gsutil/
 
-# MCP Server specific
-# Log files
+# Logs and temporary files
 logs/
 *.log
 *.log.*
-
-# Configuration files with secrets
-config.json
-settings.json
-secrets.json
-.secrets
-
-# Data files
-data/
-*.db
-*.sqlite
-*.sqlite3
-
-# Temporary files
 tmp/
 temp/
 *.tmp
 *.temp
 
-# OS generated files
-.DS_Store
+# Data and cache
+data/
+*.db
+*.sqlite
+*.sqlite3
+query_results/
+bigquery_cache/
+export_data/
 
-# Editor backup files
-*~
-*.swp
-*.swo
+# Configuration with secrets
+config.json
+settings.json
+secrets.json
+.secrets
+config.local.yaml
+config.prod.yaml
 
-# uv
-.uv/
+# Documentation
+docs/_build/
+/site
 
 # Local development
 local/
 dev/
-test_outputs/
+test_data/
 
-# Monitoring and metrics
-metrics/
-monitoring/
-
-# Terraform (if using)
+# Infrastructure
 *.tfstate
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
-
-# Docker
-.dockerignore
+*.kubeconfig
