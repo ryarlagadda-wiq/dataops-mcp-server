@@ -1,9 +1,15 @@
 # AI Integration Guide
 
 
-## MCP Hosts
-| Claude | Cursor | VS Code |
-|:------:|:-------:|:-------:|
+## Install in other MCP Hosts
+
+- **Claude Applications** - Installation guide for Claude Web, Claude Desktop and Claude Code CLI
+- **Cursor** - Installation guide for Cursor IDE
+- **Windsurf** - Installation guide for Windsurf IDE
+- **Visual Studio** - Installation guide for Visual Studio IDE
+
+| Claude | Cursor |  Windsurf | VS Code |
+|:------:|:-------:|:-------:|:-------:|
 
 
 ## 🖥️ Claude Desktop Integration
