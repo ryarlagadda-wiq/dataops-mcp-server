@@ -96,16 +96,11 @@ data/
 *.sqlite
 *.sqlite3
 query_results/
-bigquery_cache/
-export_data/
 
 # Configuration with secrets
-config.json
-settings.json
-secrets.json
-.secrets
-config.local.yaml
-config.prod.yaml
+config.*
+settings.*
+secrets.*
 
 # Documentation
 docs/_build/
