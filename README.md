@@ -42,16 +42,16 @@ The following sets of tools are available (all are on by deafult):
 <!-- START AUTOMATED TOOLSETS -->
 Toolset | Description
 ---|---
-`get_bigquery_costs` | Retrieve BigQuery cost breakdowns by date, project, user, dataset, etc.
-`analyze_query_cost` | Predict query cost before execution and get AI-based optimization suggestions
-`detect_cost_anomalies` | Detect unusual spending using ML and get early budget overrun alerts
-`optimize_query` | Use LLMs to auto-optimize SQL queries with explanations and savings estimates
-`create_optimization_pr` | Auto-generate GitHub PRs with cost-saving SQL and tests
-`send_cost_alert` | Send cost alerts to Slack with context and recommended actions
-`get_dbt_model_costs` | Analyze dbt model costs and suggest materialization improvements
-`monitor_sla_compliance` | Track SLA compliance and cost-performance trade-offs
-`forecast_costs` | Forecast future costs and recommend budget plans
-`slack_post_message` | Post a new message to a Slack channel (shared Slack tool)
+`get_bigquery_costs` | Retrieve BigQuery cost breakdowns
+`analyze_query_cost` | Predict query cost before execution
+`detect_cost_anomalies` | Detect unusual spending using ML
+`optimize_query` | Use LLMs to auto-optimize SQL queries
+`create_optimization_pr` | Auto-generate GitHub PRs
+`send_cost_alert` | Send cost alerts to Slack
+`get_dbt_model_costs` | Analyze dbt model costs
+`monitor_sla_compliance` | Track SLA compliance
+`forecast_costs` | Forecast future costs
+`slack_post_message` | Post message to Slack
 
 <!--END AUTOMATED TOOLSETS -->
 ---
