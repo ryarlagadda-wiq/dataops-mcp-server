@@ -1,7 +1,7 @@
 # AI Integration Guide
 
 
-## AI Assistants
+## MCP Hosts
 | Claude | Cursor | VS Code |
 |:------:|:-------:|:-------:|
 
