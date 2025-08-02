@@ -49,7 +49,7 @@ Toolset | Description
 `create_optimization_pr` | Auto-generate GitHub PRs
 `send_cost_alert` | Send cost alerts to Slack
 `get_dbt_model_costs` | Analyze dbt model costs
-`monitor_sla_compliance` | Track SLA compliance
+`monitor_sla_compliance` | Track SLA compliance and cost-performance trade-offs
 `forecast_costs` | Forecast future costs
 `slack_post_message` | Post message to Slack
 
