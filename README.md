@@ -35,9 +35,9 @@ For more examples and advanced usage, see the [detailed usage guide](https://git
 ## 🤖 AI Integration
 To get started using this MCP server with your AI assistants offering MCP support, like Claude Desktop, Cursor. Refer to this [Integration guide](https://github.com/rohithay/cloud-dataops-agent/blob/main/docs/ai-integration.md).
 
-# Available Tools
+# Available Toolsets
 
-Tools provided by this Server | Short Description
+Toolset | Description
 ---|---
 `get_bigquery_costs` | Retrieve BigQuery cost breakdowns by date, project, user, dataset, etc.
 `analyze_query_cost` | Predict query cost before execution and get AI-based optimization suggestions
@@ -52,7 +52,7 @@ Tools provided by this Server | Short Description
 
 ---
 
-## Tools Details
+## Tools
 
 ### Tool: `get_bigquery_costs`
 Retrieve comprehensive BigQuery cost analysis for specified time periods.
