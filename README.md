@@ -37,6 +37,9 @@ To get started using this MCP server with your AI assistants offering MCP suppor
 
 # Available Toolsets
 
+The following sets of tools are available (all are on by deafult):
+
+<!-- START AUTOMATED TOOLSETS -->
 Toolset | Description
 ---|---
 `get_bigquery_costs` | Retrieve BigQuery cost breakdowns by date, project, user, dataset, etc.
@@ -50,9 +53,16 @@ Toolset | Description
 `forecast_costs` | Forecast future costs and recommend budget plans
 `slack_post_message` | Post a new message to a Slack channel (shared Slack tool)
 
+<!--END AUTOMATED TOOLSETS -->
 ---
 
 ## Tools
+
+
+<!-- START AUTOMATED TOOLS -->
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `get_bigquery_costs`
 Retrieve comprehensive BigQuery cost analysis for specified time periods.
@@ -65,7 +75,11 @@ Retrieve comprehensive BigQuery cost analysis for specified time periods.
 | `group_by` | array (default: ["date"]) | Grouping dimensions (date, user, dataset, query_type) |
 | `include_query_details` | boolean (default: false) | Include individual query cost breakdowns |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `analyze_query_cost`
 Predict cost of a SQL query before execution and get optimization suggestions.
@@ -78,7 +92,11 @@ Predict cost of a SQL query before execution and get optimization suggestions.
 | `optimization_model` | string (default: "claude") | Model to use ("claude", "gpt-4") |
 | `create_pr_if_savings` | boolean (default: false) | Create GitHub PR if savings exceed threshold |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `detect_cost_anomalies`
 Use ML to detect cost spikes, anomalies, and early signs of overruns.
@@ -91,7 +109,11 @@ Use ML to detect cost spikes, anomalies, and early signs of overruns.
 | `alert_threshold` | number (default: 0.25) | Alert threshold (e.g., 0.25 = 25% increase) |
 | `send_slack_alert` | boolean (default: false) | Send alert to Slack |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `optimize_query`
 LLM-powered query optimization with cost-saving recommendations.
@@ -105,7 +127,11 @@ LLM-powered query optimization with cost-saving recommendations.
 | `target_savings_pct` | number (default: 30) | Target savings percentage |
 | `dbt_model_path` | string (optional) | Path to dbt model for context |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `create_optimization_pr`
 Auto-create GitHub PRs with optimized SQL and validation tests.
@@ -119,7 +145,11 @@ Auto-create GitHub PRs with optimized SQL and validation tests.
 | `assign_reviewers` | boolean (default: true) | Auto-assign reviewers |
 | `include_tests` | boolean (default: true) | Generate validation tests |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `send_cost_alert`
 Send actionable cost alerts to Slack with rich context.
@@ -133,7 +163,11 @@ Send actionable cost alerts to Slack with rich context.
 | `mention_users` | array (default: []) | Users to mention |
 | `include_remediation` | boolean (default: true) | Include fix suggestions |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `get_dbt_model_costs`
 Analyze dbt model execution costs and optimization opportunities.
@@ -146,7 +180,11 @@ Analyze dbt model execution costs and optimization opportunities.
 | `days` | number (default: 7) | Time period for analysis |
 | `suggest_optimizations` | boolean (default: true) | Include cost-saving suggestions |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `monitor_sla_compliance`
 Monitor pipeline SLAs and correlate with cost-performance metrics.
@@ -159,7 +197,11 @@ Monitor pipeline SLAs and correlate with cost-performance metrics.
 | `alert_on_breach` | boolean (default: false) | Send alerts for SLA breaches |
 | `optimization_suggestions` | boolean (default: true) | Suggest cost-aware fixes |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `forecast_costs`
 Forecast future GCP spend using ML and scenario modeling.
@@ -172,7 +214,11 @@ Forecast future GCP spend using ML and scenario modeling.
 | `scenario_analysis` | boolean (default: false) | Include optimistic/pessimistic forecasts |
 | `budget_recommendations` | boolean (default: true) | Suggest budget allocations |
 
----
+</details>
+
+<details>
+
+<summary>Actions</summary>
 
 ### Tool: `slack_post_message`
 Post a message to a Slack channel.
@@ -181,3 +227,5 @@ Post a message to a Slack channel.
 |------------|----------|-------------|
 | `channel_id` | string | ID of the Slack channel |
 | `text` | string | Message text to post |
+
+</details>
