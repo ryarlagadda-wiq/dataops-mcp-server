@@ -1,4 +1,4 @@
-# GCP Cost Optimization Multi-Agent MCP Server
+# GCP Cost Optimization MCP Server
 
 ## 🚀 Installation
 
