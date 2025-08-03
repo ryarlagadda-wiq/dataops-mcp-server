@@ -395,3 +395,339 @@ def get_cost_summary(project_id: str, days: int = 7) -> str:
             "success": False,
             "error": str(e)
         })
+
+
+# Cost Optimizer Tool Wrappers
+def analyze_expensive_queries_direct(
+    project_id: str,
+    days: int = 7,
+    min_cost_threshold: float = 10.0,
+    categorize_by: str = "cost_driver"
+) -> str:
+    """
+    Wrapper for analyze_expensive_queries to work with CLI.
+    
+    Args:
+        project_id: GCP project ID
+        days: Number of days to analyze (1-30, default: 7)
+        min_cost_threshold: Minimum cost to be considered expensive (default: 10.0)
+        categorize_by: Categorization method (cost_driver, usage_pattern, optimization_opportunity)
+    
+    Returns:
+        JSON string with categorized expensive queries and optimization suggestions
+    """
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    
+    try:
+        bq_client = setup_client(project_id)
+        
+        # Get expensive queries with detailed metadata
+        query = f"""
+        WITH expensive_queries AS (
+            SELECT 
+                job_id,
+                user_email,
+                creation_time,
+                LEFT(query, 2000) as query_text,
+                statement_type,
+                total_bytes_processed,
+                total_bytes_processed / POW(10, 12) * 6.25 as cost_usd,
+                TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
+                COALESCE(total_slot_ms / TIMESTAMP_DIFF(end_time, start_time, MILLISECOND), 0) as avg_slots,
+                destination_table.dataset_id as target_dataset,
+                destination_table.table_id as target_table,
+                cache_hit,
+                reservation_id,
+                
+                -- Cost driver classification
+                CASE 
+                    WHEN total_bytes_processed / POW(10, 12) > 10 THEN 'DATA_VOLUME_HEAVY'
+                    WHEN COALESCE(total_slot_ms / TIMESTAMP_DIFF(end_time, start_time, MILLISECOND), 0) > 2000 THEN 'COMPUTE_INTENSIVE'
+                    WHEN total_bytes_processed / POW(10, 12) > 1 AND COALESCE(total_slot_ms / TIMESTAMP_DIFF(end_time, start_time, MILLISECOND), 0) > 500 THEN 'MIXED_HEAVY'
+                    ELSE 'MODERATE_USAGE'
+                END as cost_driver_type,
+                
+                -- Usage pattern classification  
+                CASE 
+                    WHEN job_id LIKE '%airflow%' OR job_id LIKE '%scheduled%' THEN 'ETL_SCHEDULED'
+                    WHEN user_email LIKE '%gserviceaccount.com' THEN 'SERVICE_ACCOUNT'
+                    WHEN query LIKE '%LIMIT%' AND query LIKE '%ORDER BY%' THEN 'EXPLORATORY'
+                    WHEN statement_type IN ('CREATE_TABLE_AS_SELECT', 'INSERT') THEN 'DATA_PIPELINE'
+                    ELSE 'AD_HOC_ANALYSIS'
+                END as usage_pattern,
+                
+                -- Optimization opportunity classification
+                CASE 
+                    WHEN query LIKE '%SELECT *%' AND total_bytes_processed / POW(10, 12) > 1 THEN 'COLUMN_PRUNING'
+                    WHEN query NOT LIKE '%WHERE%' AND total_bytes_processed / POW(10, 12) > 5 THEN 'MISSING_FILTERS'
+                    WHEN query LIKE '%JOIN%' AND (query LIKE '%SELECT *%' OR NOT query LIKE '%WHERE%') THEN 'JOIN_OPTIMIZATION'
+                    WHEN NOT cache_hit AND query LIKE '%GROUP BY%' THEN 'CACHING_OPPORTUNITY'
+                    WHEN query LIKE '%ORDER BY%' AND NOT query LIKE '%LIMIT%' THEN 'RESULT_LIMITING'
+                    ELSE 'GENERAL_OPTIMIZATION'
+                END as optimization_category
+                
+            FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+                AND job_type = 'QUERY'
+                AND state = 'DONE'
+                AND error_result IS NULL
+                AND total_bytes_processed IS NOT NULL
+                AND total_bytes_processed / POW(10, 12) * 6.25 >= {min_cost_threshold}
+                AND query IS NOT NULL
+        )
+        SELECT * FROM expensive_queries
+        ORDER BY cost_usd DESC
+        LIMIT 100
+        """
+        
+        results = list(bq_client.query(query))
+        
+        # Process and categorize results
+        categorized_queries = {}
+        total_cost = 0
+        
+        for row in results:
+            total_cost += row.cost_usd
+            
+            # Determine categorization key
+            if categorize_by == "cost_driver":
+                category_key = row.cost_driver_type
+            elif categorize_by == "usage_pattern":
+                category_key = row.usage_pattern
+            else:
+                category_key = row.optimization_category
+            
+            if category_key not in categorized_queries:
+                categorized_queries[category_key] = {
+                    "queries": [],
+                    "total_cost": 0,
+                    "query_count": 0
+                }
+            
+            query_entry = {
+                "job_id": row.job_id,
+                "user_email": row.user_email,
+                "creation_time": row.creation_time.isoformat(),
+                "cost_usd": round(row.cost_usd, 2),
+                "duration_ms": row.duration_ms,
+                "avg_slots": round(row.avg_slots, 2),
+                "cost_driver_type": row.cost_driver_type,
+                "usage_pattern": row.usage_pattern,
+                "optimization_category": row.optimization_category,
+                "target_table": f"{row.target_dataset}.{row.target_table}" if row.target_dataset else None,
+                "cache_hit": row.cache_hit,
+                "query_preview": row.query_text[:500] + "..." if len(row.query_text) > 500 else row.query_text
+            }
+            
+            categorized_queries[category_key]["queries"].append(query_entry)
+            categorized_queries[category_key]["total_cost"] += row.cost_usd
+            categorized_queries[category_key]["query_count"] += 1
+        
+        # Calculate averages
+        for category, data in categorized_queries.items():
+            data["avg_cost"] = round(data["total_cost"] / data["query_count"], 2)
+            data["total_cost"] = round(data["total_cost"], 2)
+        
+        return json.dumps({
+            "success": True,
+            "analysis_period": {
+                "days": days,
+                "min_cost_threshold": min_cost_threshold,
+                "categorize_by": categorize_by
+            },
+            "summary": {
+                "total_expensive_queries": len(results),
+                "total_cost_analyzed": round(total_cost, 2),
+                "categories_found": len(categorized_queries),
+                "avg_cost_per_query": round(total_cost / len(results), 2) if results else 0
+            },
+            "categorized_queries": categorized_queries,
+            "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
+
+
+def detect_optimization_patterns_direct(
+    project_id: str,
+    days: int = 7,
+    min_cost_threshold: float = 5.0
+) -> str:
+    """
+    Wrapper for detect_optimization_patterns to work with CLI.
+    
+    Args:
+        project_id: GCP project ID
+        days: Number of days to analyze (1-30, default: 7)
+        min_cost_threshold: Minimum cost to analyze (default: 5.0)
+    
+    Returns:
+        JSON string with detected patterns and specific optimization suggestions
+    """
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    
+    try:
+        bq_client = setup_client(project_id)
+        
+        query = f"""
+        SELECT 
+            job_id,
+            user_email,
+            creation_time,
+            query,
+            total_bytes_processed / POW(10, 12) * 6.25 as cost_usd,
+            total_bytes_processed / POW(10, 12) as tb_processed,
+            TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
+            COALESCE(total_slot_ms / TIMESTAMP_DIFF(end_time, start_time, MILLISECOND), 0) as avg_slots,
+            cache_hit,
+            statement_type,
+            destination_table.dataset_id as target_dataset,
+            destination_table.table_id as target_table
+        FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+        WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+            AND job_type = 'QUERY'
+            AND state = 'DONE'
+            AND error_result IS NULL
+            AND total_bytes_processed IS NOT NULL
+            AND total_bytes_processed / POW(10, 12) * 6.25 >= {min_cost_threshold}
+            AND query IS NOT NULL
+        ORDER BY cost_usd DESC
+        LIMIT 200
+        """
+        
+        results = list(bq_client.query(query))
+        
+        patterns_detected = {
+            "select_star_large_scan": [],
+            "missing_partition_filter": [],
+            "unfiltered_aggregation": [],
+            "order_without_limit": [],
+            "complex_joins": [],
+            "no_cache_utilization": []
+        }
+        
+        total_potential_savings = 0
+        
+        for row in results:
+            query_text = row.query.upper() if row.query else ""
+            cost = row.cost_usd
+            
+            # Pattern 1: SELECT * with large data scan
+            if "SELECT *" in query_text and row.tb_processed > 1:
+                patterns_detected["select_star_large_scan"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "tb_processed": row.tb_processed,
+                    "potential_savings_usd": cost * 0.4,
+                    "recommendation": "Replace SELECT * with specific column names",
+                    "implementation": "List only required columns to reduce data processing"
+                })
+                total_potential_savings += cost * 0.4
+            
+            # Pattern 2: Missing partition filters
+            if row.tb_processed > 5 and not any(filter_word in query_text for filter_word in 
+                ['_PARTITIONTIME', '_PARTITIONDATE', 'DATE(', 'PARTITION']):
+                patterns_detected["missing_partition_filter"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "tb_processed": row.tb_processed,
+                    "potential_savings_usd": cost * 0.6,
+                    "recommendation": "Add partition filters to limit data scan",
+                    "implementation": "Add WHERE _PARTITIONDATE >= 'YYYY-MM-DD' clause"
+                })
+                total_potential_savings += cost * 0.6
+            
+            # Pattern 3: Unfiltered aggregations
+            if "GROUP BY" in query_text and "WHERE" not in query_text and row.tb_processed > 2:
+                patterns_detected["unfiltered_aggregation"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "potential_savings_usd": cost * 0.5,
+                    "recommendation": "Add WHERE clause to filter data before aggregation",
+                    "implementation": "Filter data early to reduce aggregation workload"
+                })
+                total_potential_savings += cost * 0.5
+            
+            # Pattern 4: ORDER BY without LIMIT
+            if "ORDER BY" in query_text and "LIMIT" not in query_text and row.tb_processed > 1:
+                patterns_detected["order_without_limit"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "potential_savings_usd": cost * 0.25,
+                    "recommendation": "Add LIMIT clause to ORDER BY queries",
+                    "implementation": "Use LIMIT to avoid sorting entire result set"
+                })
+                total_potential_savings += cost * 0.25
+            
+            # Pattern 5: Complex JOINs
+            join_count = query_text.count("JOIN")
+            if join_count >= 3:
+                patterns_detected["complex_joins"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "join_count": join_count,
+                    "potential_savings_usd": cost * 0.3,
+                    "recommendation": f"Optimize {join_count} JOINs - consider denormalization",
+                    "implementation": "Review JOIN order, consider materialized views"
+                })
+                total_potential_savings += cost * 0.3
+            
+            # Pattern 6: No cache utilization
+            if not row.cache_hit and cost > 10:
+                patterns_detected["no_cache_utilization"].append({
+                    "job_id": row.job_id,
+                    "user_email": row.user_email,
+                    "cost_usd": cost,
+                    "potential_savings_usd": cost * 0.8,
+                    "recommendation": "Enable query result caching",
+                    "implementation": "Use deterministic queries that can be cached"
+                })
+                total_potential_savings += cost * 0.8
+        
+        # Calculate pattern summaries
+        pattern_summary = {}
+        for pattern_name, pattern_queries in patterns_detected.items():
+            if pattern_queries:
+                pattern_summary[pattern_name] = {
+                    "occurrences": len(pattern_queries),
+                    "total_cost": sum(q["cost_usd"] for q in pattern_queries),
+                    "total_potential_savings": sum(q["potential_savings_usd"] for q in pattern_queries),
+                    "avg_cost_per_occurrence": sum(q["cost_usd"] for q in pattern_queries) / len(pattern_queries)
+                }
+        
+        return json.dumps({
+            "success": True,
+            "analysis_period": {
+                "days": days,
+                "min_cost_threshold": min_cost_threshold,
+                "queries_analyzed": len(results)
+            },
+            "summary": {
+                "patterns_detected": len([p for p in patterns_detected.values() if p]),
+                "total_potential_savings_usd": round(total_potential_savings, 2),
+                "top_opportunity": max(pattern_summary.items(), 
+                                    key=lambda x: x[1]["total_potential_savings"])[0] if pattern_summary else None
+            },
+            "pattern_summary": pattern_summary,
+            "detailed_patterns": patterns_detected,
+            "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })

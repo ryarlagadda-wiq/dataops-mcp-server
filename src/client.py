@@ -51,6 +51,43 @@ async def run_service_account_analysis(args):
     except Exception as e:
         print(f"❌ Failed to run service account analysis: {e}")
 
+async def run_expensive_queries_analysis(args):
+    """Run expensive queries analysis."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+        from tools.bigquery_wrapper import analyze_expensive_queries_direct
+        
+        result = analyze_expensive_queries_direct(
+            project_id=args.project,
+            days=args.days,
+            min_cost_threshold=args.min_cost,
+            categorize_by=args.categorize_by
+        )
+        
+        print("💰 Expensive Queries Analysis Results:")
+        print(result)
+        
+    except Exception as e:
+        print(f"❌ Failed to analyze expensive queries: {e}")
+
+async def run_optimization_patterns(args):
+    """Run optimization patterns detection."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+        from tools.bigquery_wrapper import detect_optimization_patterns_direct
+        
+        result = detect_optimization_patterns_direct(
+            project_id=args.project,
+            days=args.days,
+            min_cost_threshold=args.min_cost
+        )
+        
+        print("🔍 Optimization Patterns Analysis Results:")
+        print(result)
+        
+    except Exception as e:
+        print(f"❌ Failed to detect optimization patterns: {e}")
+
 async def run_analyze_query(args):
     """Run query cost analysis."""
     try:
@@ -97,6 +134,19 @@ def main():
     sa_parser.add_argument("--include-queries", action="store_true", help="Include query text in results")
     sa_parser.add_argument("--min-cost", type=float, default=0.0, help="Minimum cost threshold")
     
+    # Expensive queries analysis tool
+    eq_parser = subparsers.add_parser("expensive-queries", help="Analyze expensive queries with categorization")
+    eq_parser.add_argument("--days", type=int, default=7, help="Number of days to analyze")
+    eq_parser.add_argument("--min-cost", type=float, default=10.0, help="Minimum cost threshold")
+    eq_parser.add_argument("--categorize-by", default="cost_driver", 
+                          choices=["cost_driver", "usage_pattern", "optimization_opportunity"],
+                          help="Categorization method")
+    
+    # Optimization patterns tool
+    op_parser = subparsers.add_parser("optimization-patterns", help="Detect optimization patterns in queries")
+    op_parser.add_argument("--days", type=int, default=7, help="Number of days to analyze")
+    op_parser.add_argument("--min-cost", type=float, default=5.0, help="Minimum cost threshold")
+    
     # Query analysis tool
     query_parser = subparsers.add_parser("query", help="Analyze query cost")
     query_parser.add_argument("sql", help="SQL query to analyze")
@@ -120,6 +170,10 @@ def main():
             asyncio.run(run_get_costs(args))
         elif args.tool == "service-accounts":
             asyncio.run(run_service_account_analysis(args))
+        elif args.tool == "expensive-queries":
+            asyncio.run(run_expensive_queries_analysis(args))
+        elif args.tool == "optimization-patterns":
+            asyncio.run(run_optimization_patterns(args))
         elif args.tool == "query":
             asyncio.run(run_analyze_query(args))
         elif args.tool == "health":

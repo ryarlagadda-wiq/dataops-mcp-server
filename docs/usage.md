@@ -25,8 +25,29 @@ python src/mcp_servers/server.py &
 The project includes a command-line client for interacting with the MCP server:
 
 ```bash
-# Get current BigQuery costs
-python src/client.py get-costs [--days 7] [--project your-project] [--region us-central1]
+# Basic cost analysis ✅  
+uv run python src/client.py costs --days 3
+
+# Detailed cost summary ✅
+uv run python src/client.py costs --days 7 --details
+
+# Service account cost summary ✅
+uv run python src/client.py service-accounts --days 7 --min-cost 10.0
+
+# Query analysis (shows informative message)
+uv run python src/client.py query "SELECT 1" --optimize
+
+# Analyze expensive queries by cost driver
+uv run python src/client.py expensive-queries --days 7 --min-cost 10.0 --categorize-by cost_driver
+
+# Find optimization patterns
+uv run python src/client.py optimization-patterns --days 7 --min-cost 5.0
+
+# Analyze by optimization opportunities
+uv run python src/client.py expensive-queries --categorize-by optimization_opportunity
+
+# See all available tools
+uv run python src/client.py --help
 
 # Get costs with forecasting
 python src/client.py get-costs --days 30 --include-predictions [--project your-project]
