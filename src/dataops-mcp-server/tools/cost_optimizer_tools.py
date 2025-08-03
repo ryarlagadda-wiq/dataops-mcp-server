@@ -1361,11 +1361,228 @@ GROUP BY DATE(sale_date), store_id
         })
 
 def _generate_optimization_recommendations(category: str, data: Dict, categorize_by: str) -> List[Dict]:
-    """Generate optimization recommendations based on category analysis"""
+    """
+    Generate optimization recommendations based on category analysis.
+    
+    Args:
+        category: The category name (e.g., 'DATA_VOLUME_HEAVY', 'MISSING_FILTERS', etc.)
+        data: Dictionary containing category data with keys: queries, total_cost, query_count, avg_cost
+        categorize_by: The categorization method ('cost_driver', 'usage_pattern', 'optimization_opportunity')
+    
+    Returns:
+        List of recommendation dictionaries with priority, description, implementation, and potential_savings
+    """
     recommendations = []
+    total_cost = data.get("total_cost", 0)
+    query_count = data.get("query_count", 0)
+    avg_cost = data.get("avg_cost", 0)
     
     if categorize_by == "cost_driver":
         if category == "DATA_VOLUME_HEAVY":
             recommendations.append({
                 "priority": "HIGH",
                 "category": category,
+                "title": "Optimize Large Data Scans",
+                "description": f"These {query_count} queries process massive amounts of data (avg ${avg_cost:.2f}/query)",
+                "implementation": [
+                    "Add partition filters to limit data scanning",
+                    "Replace SELECT * with specific column names",
+                    "Use LIMIT clauses for exploratory queries",
+                    "Consider materialized views for repeated patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.6, 2),
+                "effort": "Medium",
+                "timeline": "2-4 weeks"
+            })
+        
+        elif category == "COMPUTE_INTENSIVE":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Reduce Compute Complexity",
+                "description": f"These {query_count} queries use excessive compute resources (high slot usage)",
+                "implementation": [
+                    "Optimize complex JOINs and subqueries",
+                    "Use approximate aggregation functions where possible",
+                    "Consider breaking complex queries into steps",
+                    "Enable query result caching"
+                ],
+                "potential_savings_usd": round(total_cost * 0.3, 2),
+                "effort": "High",
+                "timeline": "4-6 weeks"
+            })
+        
+        elif category == "MIXED_HEAVY":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Comprehensive Query Optimization",
+                "description": f"These {query_count} queries have both high data volume and compute usage",
+                "implementation": [
+                    "Apply both data volume and compute optimizations",
+                    "Review query architecture and design",
+                    "Consider denormalization strategies",
+                    "Implement incremental processing patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.5, 2),
+                "effort": "High",
+                "timeline": "6-8 weeks"
+            })
+    
+    elif categorize_by == "usage_pattern":
+        if category == "SERVICE_ACCOUNT":
+            recommendations.append({
+                "priority": "CRITICAL",
+                "category": category,
+                "title": "Optimize Automated Service Account Queries",
+                "description": f"Service account queries cost ${total_cost:.2f} - these run repeatedly and compound costs",
+                "implementation": [
+                    "Review ETL job efficiency and scheduling",
+                    "Implement incremental data processing",
+                    "Add query result caching for repeated patterns",
+                    "Optimize dbt models and transformations"
+                ],
+                "potential_savings_usd": round(total_cost * 0.7, 2),
+                "effort": "Medium",
+                "timeline": "2-3 weeks"
+            })
+        
+        elif category == "ETL_SCHEDULED":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Optimize Scheduled ETL Jobs",
+                "description": f"Scheduled jobs consuming ${total_cost:.2f} with {query_count} executions",
+                "implementation": [
+                    "Optimize job scheduling to avoid peak hours",
+                    "Implement incremental loads instead of full refreshes",
+                    "Use clustering and partitioning effectively",
+                    "Review job dependencies and parallelization"
+                ],
+                "potential_savings_usd": round(total_cost * 0.5, 2),
+                "effort": "Medium",
+                "timeline": "3-4 weeks"
+            })
+        
+        elif category == "AD_HOC_ANALYSIS":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Improve Ad-hoc Query Efficiency",
+                "description": f"Ad-hoc analysis queries costing ${total_cost:.2f} - optimize for exploration",
+                "implementation": [
+                    "Create sample datasets for exploration",
+                    "Provide query templates and best practices",
+                    "Implement query cost warnings",
+                    "Use BI tools with built-in optimizations"
+                ],
+                "potential_savings_usd": round(total_cost * 0.4, 2),
+                "effort": "Low",
+                "timeline": "1-2 weeks"
+            })
+    
+    elif categorize_by == "optimization_opportunity":
+        if category == "MISSING_FILTERS":
+            recommendations.append({
+                "priority": "CRITICAL",
+                "category": category,
+                "title": "Add Partition and Where Filters",
+                "description": f"${total_cost:.2f} wasted on unfiltered data scans across {query_count} queries",
+                "implementation": [
+                    "Add WHERE clauses with partition columns (_PARTITIONDATE, _PARTITIONTIME)",
+                    "Implement date range filters on all time-series queries",
+                    "Use query validators to enforce filter requirements",
+                    "Create filtered views for common access patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.8, 2),
+                "effort": "Low",
+                "timeline": "1 week"
+            })
+        
+        elif category == "COLUMN_PRUNING":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Replace SELECT * with Specific Columns",
+                "description": f"${total_cost:.2f} spent on unnecessary column processing in {query_count} queries",
+                "implementation": [
+                    "Identify required columns for each query",
+                    "Replace SELECT * with explicit column lists",
+                    "Create views with commonly used column sets",
+                    "Use SELECT EXCEPT for near-complete column sets"
+                ],
+                "potential_savings_usd": round(total_cost * 0.6, 2),
+                "effort": "Low",
+                "timeline": "1-2 weeks"
+            })
+        
+        elif category == "CACHING_OPPORTUNITY":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Enable Query Result Caching",
+                "description": f"${total_cost:.2f} could be saved with caching on {query_count} repeated queries",
+                "implementation": [
+                    "Enable query result caching in BigQuery settings",
+                    "Make queries deterministic (remove NOW(), RAND(), etc.)",
+                    "Use consistent table names and avoid dynamic SQL",
+                    "Implement cache-friendly query patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.9, 2),
+                "effort": "Low",
+                "timeline": "Few days"
+            })
+        
+        elif category == "JOIN_OPTIMIZATION":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Optimize Complex Joins",
+                "description": f"${total_cost:.2f} on complex join operations in {query_count} queries",
+                "implementation": [
+                    "Review join order and use smaller tables first",
+                    "Add filters before joins to reduce data volume",
+                    "Consider denormalization for frequently joined tables",
+                    "Use ARRAY and STRUCT types to reduce joins"
+                ],
+                "potential_savings_usd": round(total_cost * 0.4, 2),
+                "effort": "Medium",
+                "timeline": "2-3 weeks"
+            })
+        
+        elif category == "RESULT_LIMITING":
+            recommendations.append({
+                "priority": "LOW",
+                "category": category,
+                "title": "Add LIMIT Clauses to Large Result Sets",
+                "description": f"${total_cost:.2f} on queries returning large result sets without limits",
+                "implementation": [
+                    "Add LIMIT clauses to exploratory queries",
+                    "Use QUALIFY for window function results",
+                    "Implement pagination for large datasets",
+                    "Use TABLESAMPLE for data exploration"
+                ],
+                "potential_savings_usd": round(total_cost * 0.3, 2),
+                "effort": "Low",
+                "timeline": "1 week"
+            })
+    
+    # Add general recommendations if no specific category matched
+    if not recommendations:
+        recommendations.append({
+            "priority": "MEDIUM",
+            "category": category,
+            "title": "General Query Optimization",
+            "description": f"Review and optimize {query_count} queries costing ${total_cost:.2f}",
+            "implementation": [
+                "Analyze query execution plans",
+                "Apply standard BigQuery optimization practices",
+                "Monitor query performance over time",
+                "Implement cost alerts and governance"
+            ],
+            "potential_savings_usd": round(total_cost * 0.2, 2),
+            "effort": "Medium",
+            "timeline": "2-4 weeks"
+        })
+    
+    return recommendations

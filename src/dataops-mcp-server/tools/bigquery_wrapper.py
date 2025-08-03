@@ -5,6 +5,7 @@ BigQuery Tools Wrapper - Provides direct access to FastMCP functions
 
 import os
 import json
+import hashlib
 from datetime import datetime, timedelta
 from google.cloud import bigquery
 
@@ -524,10 +525,15 @@ def analyze_expensive_queries_direct(
             categorized_queries[category_key]["total_cost"] += row.cost_usd
             categorized_queries[category_key]["query_count"] += 1
         
-        # Calculate averages
+        # Calculate averages and generate recommendations
+        optimization_recommendations = []
         for category, data in categorized_queries.items():
             data["avg_cost"] = round(data["total_cost"] / data["query_count"], 2)
             data["total_cost"] = round(data["total_cost"], 2)
+            
+            # Generate category-specific recommendations
+            recommendations = _generate_optimization_recommendations(category, data, categorize_by)
+            optimization_recommendations.extend(recommendations)
         
         return json.dumps({
             "success": True,
@@ -543,6 +549,7 @@ def analyze_expensive_queries_direct(
                 "avg_cost_per_query": round(total_cost / len(results), 2) if results else 0
             },
             "categorized_queries": categorized_queries,
+            "optimization_recommendations": optimization_recommendations,
             "generated_at": datetime.now().isoformat()
         }, indent=2)
         
@@ -723,6 +730,796 @@ def detect_optimization_patterns_direct(
             "pattern_summary": pattern_summary,
             "detailed_patterns": patterns_detected,
             "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
+
+
+def _generate_optimization_recommendations(category: str, data: dict, categorize_by: str) -> list:
+    """
+    Generate optimization recommendations based on category analysis.
+    
+    Args:
+        category: The category name (e.g., 'DATA_VOLUME_HEAVY', 'MISSING_FILTERS', etc.)
+        data: Dictionary containing category data with keys: queries, total_cost, query_count, avg_cost
+        categorize_by: The categorization method ('cost_driver', 'usage_pattern', 'optimization_opportunity')
+    
+    Returns:
+        List of recommendation dictionaries with priority, description, implementation, and potential_savings
+    """
+    recommendations = []
+    total_cost = data.get("total_cost", 0)
+    query_count = data.get("query_count", 0)
+    avg_cost = data.get("avg_cost", 0)
+    
+    if categorize_by == "cost_driver":
+        if category == "DATA_VOLUME_HEAVY":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Optimize Large Data Scans",
+                "description": f"These {query_count} queries process massive amounts of data (avg ${avg_cost:.2f}/query)",
+                "implementation": [
+                    "Add partition filters to limit data scanning",
+                    "Replace SELECT * with specific column names",
+                    "Use LIMIT clauses for exploratory queries",
+                    "Consider materialized views for repeated patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.6, 2),
+                "effort": "Medium",
+                "timeline": "2-4 weeks"
+            })
+        
+        elif category == "COMPUTE_INTENSIVE":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Reduce Compute Complexity",
+                "description": f"These {query_count} queries use excessive compute resources (high slot usage)",
+                "implementation": [
+                    "Optimize complex JOINs and subqueries",
+                    "Use approximate aggregation functions where possible",
+                    "Consider breaking complex queries into steps",
+                    "Enable query result caching"
+                ],
+                "potential_savings_usd": round(total_cost * 0.3, 2),
+                "effort": "High",
+                "timeline": "4-6 weeks"
+            })
+        
+        elif category == "MIXED_HEAVY":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Comprehensive Query Optimization",
+                "description": f"These {query_count} queries have both high data volume and compute usage",
+                "implementation": [
+                    "Apply both data volume and compute optimizations",
+                    "Review query architecture and design",
+                    "Consider denormalization strategies",
+                    "Implement incremental processing patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.5, 2),
+                "effort": "High",
+                "timeline": "6-8 weeks"
+            })
+    
+    elif categorize_by == "usage_pattern":
+        if category == "SERVICE_ACCOUNT":
+            recommendations.append({
+                "priority": "CRITICAL",
+                "category": category,
+                "title": "Optimize Automated Service Account Queries",
+                "description": f"Service account queries cost ${total_cost:.2f} - these run repeatedly and compound costs",
+                "implementation": [
+                    "Review ETL job efficiency and scheduling",
+                    "Implement incremental data processing",
+                    "Add query result caching for repeated patterns",
+                    "Optimize dbt models and transformations"
+                ],
+                "potential_savings_usd": round(total_cost * 0.7, 2),
+                "effort": "Medium",
+                "timeline": "2-3 weeks"
+            })
+        
+        elif category == "ETL_SCHEDULED":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Optimize Scheduled ETL Jobs",
+                "description": f"Scheduled jobs consuming ${total_cost:.2f} with {query_count} executions",
+                "implementation": [
+                    "Optimize job scheduling to avoid peak hours",
+                    "Implement incremental loads instead of full refreshes",
+                    "Use clustering and partitioning effectively",
+                    "Review job dependencies and parallelization"
+                ],
+                "potential_savings_usd": round(total_cost * 0.5, 2),
+                "effort": "Medium",
+                "timeline": "3-4 weeks"
+            })
+        
+        elif category == "AD_HOC_ANALYSIS":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Improve Ad-hoc Query Efficiency",
+                "description": f"Ad-hoc analysis queries costing ${total_cost:.2f} - optimize for exploration",
+                "implementation": [
+                    "Create sample datasets for exploration",
+                    "Provide query templates and best practices",
+                    "Implement query cost warnings",
+                    "Use BI tools with built-in optimizations"
+                ],
+                "potential_savings_usd": round(total_cost * 0.4, 2),
+                "effort": "Low",
+                "timeline": "1-2 weeks"
+            })
+    
+    elif categorize_by == "optimization_opportunity":
+        if category == "MISSING_FILTERS":
+            recommendations.append({
+                "priority": "CRITICAL",
+                "category": category,
+                "title": "Add Partition and Where Filters",
+                "description": f"${total_cost:.2f} wasted on unfiltered data scans across {query_count} queries",
+                "implementation": [
+                    "Add WHERE clauses with partition columns (_PARTITIONDATE, _PARTITIONTIME)",
+                    "Implement date range filters on all time-series queries",
+                    "Use query validators to enforce filter requirements",
+                    "Create filtered views for common access patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.8, 2),
+                "effort": "Low",
+                "timeline": "1 week"
+            })
+        
+        elif category == "COLUMN_PRUNING":
+            recommendations.append({
+                "priority": "HIGH",
+                "category": category,
+                "title": "Replace SELECT * with Specific Columns",
+                "description": f"${total_cost:.2f} spent on unnecessary column processing in {query_count} queries",
+                "implementation": [
+                    "Identify required columns for each query",
+                    "Replace SELECT * with explicit column lists",
+                    "Create views with commonly used column sets",
+                    "Use SELECT EXCEPT for near-complete column sets"
+                ],
+                "potential_savings_usd": round(total_cost * 0.6, 2),
+                "effort": "Low",
+                "timeline": "1-2 weeks"
+            })
+        
+        elif category == "CACHING_OPPORTUNITY":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Enable Query Result Caching",
+                "description": f"${total_cost:.2f} could be saved with caching on {query_count} repeated queries",
+                "implementation": [
+                    "Enable query result caching in BigQuery settings",
+                    "Make queries deterministic (remove NOW(), RAND(), etc.)",
+                    "Use consistent table names and avoid dynamic SQL",
+                    "Implement cache-friendly query patterns"
+                ],
+                "potential_savings_usd": round(total_cost * 0.9, 2),
+                "effort": "Low",
+                "timeline": "Few days"
+            })
+        
+        elif category == "JOIN_OPTIMIZATION":
+            recommendations.append({
+                "priority": "MEDIUM",
+                "category": category,
+                "title": "Optimize Complex Joins",
+                "description": f"${total_cost:.2f} on complex join operations in {query_count} queries",
+                "implementation": [
+                    "Review join order and use smaller tables first",
+                    "Add filters before joins to reduce data volume",
+                    "Consider denormalization for frequently joined tables",
+                    "Use ARRAY and STRUCT types to reduce joins"
+                ],
+                "potential_savings_usd": round(total_cost * 0.4, 2),
+                "effort": "Medium",
+                "timeline": "2-3 weeks"
+            })
+        
+        elif category == "RESULT_LIMITING":
+            recommendations.append({
+                "priority": "LOW",
+                "category": category,
+                "title": "Add LIMIT Clauses to Large Result Sets",
+                "description": f"${total_cost:.2f} on queries returning large result sets without limits",
+                "implementation": [
+                    "Add LIMIT clauses to exploratory queries",
+                    "Use QUALIFY for window function results",
+                    "Implement pagination for large datasets",
+                    "Use TABLESAMPLE for data exploration"
+                ],
+                "potential_savings_usd": round(total_cost * 0.3, 2),
+                "effort": "Low",
+                "timeline": "1 week"
+            })
+    
+    # Add general recommendations if no specific category matched
+    if not recommendations:
+        recommendations.append({
+            "priority": "MEDIUM",
+            "category": category,
+            "title": "General Query Optimization",
+            "description": f"Review and optimize {query_count} queries costing ${total_cost:.2f}",
+            "implementation": [
+                "Analyze query execution plans",
+                "Apply standard BigQuery optimization practices",
+                "Monitor query performance over time",
+                "Implement cost alerts and governance"
+            ],
+            "potential_savings_usd": round(total_cost * 0.2, 2),
+            "effort": "Medium",
+            "timeline": "2-4 weeks"
+        })
+    
+    return recommendations
+
+
+def create_cost_forecast_direct(
+    days_historical: int = 30,
+    days_forecast: int = 30,
+    growth_assumptions: str = "current_trend"
+) -> str:
+    """
+    Create cost forecast based on historical usage patterns.
+    """
+    try:
+        # Use default project and client
+        project_id = os.getenv('GOOGLE_CLOUD_PROJECT', 'gcp-wow-wiq-tsr-dev')
+        bq_client = setup_client(project_id)
+        
+        # Get historical daily costs
+        query = f"""
+        WITH daily_costs AS (
+            SELECT 
+                DATE(creation_time) as date,
+                SUM(total_bytes_processed / POW(10, 12) * 6.25) as daily_cost_usd,
+                COUNT(*) as query_count,
+                AVG(total_bytes_processed / POW(10, 12) * 6.25) as avg_cost_per_query
+            FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days_historical} DAY)
+                AND job_type = 'QUERY'
+                AND state = 'DONE'
+                AND error_result IS NULL
+                AND total_bytes_processed IS NOT NULL
+            GROUP BY DATE(creation_time)
+        ),
+        forecast_base AS (
+            SELECT 
+                AVG(daily_cost_usd) as avg_daily_cost,
+                STDDEV(daily_cost_usd) as cost_stddev,
+                AVG(query_count) as avg_daily_queries,
+                MAX(daily_cost_usd) as max_daily_cost,
+                MIN(daily_cost_usd) as min_daily_cost,
+                COUNT(*) as days_analyzed
+            FROM daily_costs
+        )
+        SELECT * FROM forecast_base
+        """
+        
+        results = list(bq_client.query(query))
+        if not results:
+            return json.dumps({"error": "No historical data found"})
+        
+        base_stats = results[0]
+        avg_daily_cost = float(base_stats.avg_daily_cost or 0)
+        
+        # Apply growth assumptions
+        growth_multipliers = {
+            "current_trend": 1.0,
+            "conservative": 1.1,  # 10% growth
+            "aggressive": 1.3     # 30% growth
+        }
+        
+        growth_factor = growth_multipliers.get(growth_assumptions, 1.0)
+        
+        # Generate forecast
+        forecast_data = []
+        for day in range(1, days_forecast + 1):
+            # Simple linear growth model
+            daily_forecast = avg_daily_cost * growth_factor * (1 + (day * 0.001))  # 0.1% daily growth
+            forecast_data.append({
+                "day": day,
+                "forecast_date": (datetime.now() + timedelta(days=day)).strftime("%Y-%m-%d"),
+                "forecasted_cost_usd": round(daily_forecast, 2)
+            })
+        
+        total_forecast = sum(d["forecasted_cost_usd"] for d in forecast_data)
+        monthly_forecast = total_forecast if days_forecast >= 30 else total_forecast * (30 / days_forecast)
+        
+        return json.dumps({
+            "success": True,
+            "forecast_period": {
+                "historical_days": days_historical,
+                "forecast_days": days_forecast,
+                "growth_assumptions": growth_assumptions,
+                "growth_factor": growth_factor
+            },
+            "historical_analysis": {
+                "avg_daily_cost": round(avg_daily_cost, 2),
+                "cost_stddev": round(float(base_stats.cost_stddev or 0), 2),
+                "avg_daily_queries": int(base_stats.avg_daily_queries or 0),
+                "max_daily_cost": round(float(base_stats.max_daily_cost or 0), 2),
+                "min_daily_cost": round(float(base_stats.min_daily_cost or 0), 2),
+                "days_analyzed": int(base_stats.days_analyzed or 0)
+            },
+            "forecast_summary": {
+                "total_forecast_usd": round(total_forecast, 2),
+                "monthly_estimate_usd": round(monthly_forecast, 2),
+                "avg_daily_forecast": round(total_forecast / days_forecast, 2)
+            },
+            "daily_forecasts": forecast_data[:10],  # First 10 days for brevity
+            "budget_recommendations": [
+                f"Set monthly budget alert at ${round(monthly_forecast * 1.1, 2)} (10% buffer)",
+                f"Expect daily costs around ${round(avg_daily_cost * growth_factor, 2)}",
+                f"Plan for peak costs up to ${round(float(base_stats.max_daily_cost or 0) * growth_factor, 2)}/day"
+            ],
+            "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
+
+
+def analyze_table_hotspots_direct(
+    days: int = 7,
+    min_access_cost: float = 5.0
+) -> str:
+    """
+    Analyze which tables are most expensive to access and suggest optimizations.
+    """
+    try:
+        # Use default project and client
+        project_id = os.getenv('GOOGLE_CLOUD_PROJECT', 'gcp-wow-wiq-tsr-dev')
+        bq_client = setup_client(project_id)
+        
+        query = f"""
+        WITH table_access_costs AS (
+            SELECT 
+                job_id,
+                user_email,
+                creation_time,
+                total_bytes_processed / POW(10, 12) * 6.25 as cost_usd,
+                total_bytes_processed / POW(10, 12) as tb_processed,
+                TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
+                
+                -- Extract table references from query
+                REGEXP_EXTRACT_ALL(query, r'`([^`]+\.[^`]+\.[^`]+)`') as table_refs_full,
+                REGEXP_EXTRACT_ALL(query, r'FROM\\s+`?([^\\s`]+)`?') as table_refs_from,
+                REGEXP_EXTRACT_ALL(query, r'JOIN\\s+`?([^\\s`]+)`?') as table_refs_join
+                
+            FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+                AND job_type = 'QUERY'
+                AND state = 'DONE'
+                AND error_result IS NULL
+                AND total_bytes_processed IS NOT NULL
+                AND total_bytes_processed / POW(10, 12) * 6.25 >= {min_access_cost}
+                AND query IS NOT NULL
+        ),
+        table_costs AS (
+            SELECT 
+                table_ref,
+                COUNT(*) as access_count,
+                SUM(cost_usd) as total_cost_usd,
+                AVG(cost_usd) as avg_cost_per_access,
+                SUM(tb_processed) as total_tb_processed,
+                AVG(duration_ms) as avg_duration_ms,
+                APPROX_TOP_COUNT(user_email, 3) as top_users
+            FROM table_access_costs,
+            UNNEST(ARRAY_CONCAT(table_refs_full, table_refs_from, table_refs_join)) as table_ref
+            WHERE table_ref IS NOT NULL AND table_ref != ''
+            GROUP BY table_ref
+        )
+        SELECT 
+            table_ref,
+            access_count,
+            total_cost_usd,
+            avg_cost_per_access,
+            total_tb_processed,
+            avg_duration_ms,
+            top_users
+        FROM table_costs
+        WHERE total_cost_usd > {min_access_cost}
+        ORDER BY total_cost_usd DESC
+        LIMIT 20
+        """
+        
+        results = list(bq_client.query(query))
+        
+        table_hotspots = []
+        total_hotspot_cost = 0
+        
+        for row in results:
+            table_info = {
+                "table_name": row.table_ref,
+                "access_count": row.access_count,
+                "total_cost_usd": round(row.total_cost_usd, 2),
+                "avg_cost_per_access": round(row.avg_cost_per_access, 2),
+                "total_tb_processed": round(row.total_tb_processed, 2),
+                "avg_duration_ms": round(row.avg_duration_ms, 0),
+                "top_users": [str(user) for user in (row.top_users or [])[:3]],
+                "optimization_priority": "HIGH" if row.total_cost_usd > 100 else "MEDIUM" if row.total_cost_usd > 50 else "LOW"
+            }
+            table_hotspots.append(table_info)
+            total_hotspot_cost += row.total_cost_usd
+        
+        # Generate recommendations for top tables
+        recommendations = []
+        for table in table_hotspots[:5]:  # Top 5 tables
+            table_recs = []
+            
+            if table["avg_cost_per_access"] > 10:
+                table_recs.append("Add partition filters to reduce data scanning")
+                table_recs.append("Consider using SELECT with specific columns instead of SELECT *")
+            
+            if table["access_count"] > 10:
+                table_recs.append("Consider creating materialized views for frequent access patterns")
+                table_recs.append("Implement query result caching")
+            
+            if table["avg_duration_ms"] > 30000:  # > 30 seconds
+                table_recs.append("Optimize table clustering for frequently filtered columns")
+                table_recs.append("Review and optimize JOIN operations on this table")
+            
+            recommendations.append({
+                "table": table["table_name"],
+                "priority": table["optimization_priority"],
+                "potential_savings_usd": round(table["total_cost_usd"] * 0.4, 2),  # Conservative 40% savings
+                "recommendations": table_recs or ["Review access patterns and optimize queries"]
+            })
+        
+        return json.dumps({
+            "success": True,
+            "analysis_period": {
+                "days": days,
+                "min_access_cost": min_access_cost
+            },
+            "summary": {
+                "total_hotspot_tables": len(table_hotspots),
+                "total_hotspot_cost": round(total_hotspot_cost, 2),
+                "avg_cost_per_table": round(total_hotspot_cost / len(table_hotspots), 2) if table_hotspots else 0,
+                "top_table": table_hotspots[0]["table_name"] if table_hotspots else None,
+                "top_table_cost": table_hotspots[0]["total_cost_usd"] if table_hotspots else 0
+            },
+            "table_hotspots": table_hotspots,
+            "optimization_recommendations": recommendations,
+            "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
+
+
+def generate_materialized_view_recommendations_direct(
+    days: int = 14,
+    min_repetition_count: int = 3,
+    min_cost_per_execution: float = 5.0
+) -> str:
+    """
+    Analyze query patterns to recommend materialized views for cost optimization.
+    """
+    try:
+        # Use default project and client
+        project_id = os.getenv('GOOGLE_CLOUD_PROJECT', 'gcp-wow-wiq-tsr-dev')
+        bq_client = setup_client(project_id)
+        
+        query = f"""
+        WITH query_patterns AS (
+            SELECT 
+                -- Normalize queries by removing literals and variables
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(
+                        REGEXP_REPLACE(query, r"'[^']*'", "'<STRING>'"),
+                        r"\\b\\d+\\b", "<NUMBER>"
+                    ),
+                    r"TIMESTAMP\\('[^']*'\\)", "TIMESTAMP('<DATE>')"
+                ) as normalized_query,
+                
+                user_email,
+                total_bytes_processed / POW(10, 12) * 6.25 as cost_usd,
+                total_bytes_processed / POW(10, 12) as tb_processed,
+                TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
+                creation_time
+                
+            FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+                AND job_type = 'QUERY'
+                AND state = 'DONE'
+                AND error_result IS NULL
+                AND total_bytes_processed IS NOT NULL
+                AND total_bytes_processed / POW(10, 12) * 6.25 >= {min_cost_per_execution}
+                AND query IS NOT NULL
+                AND LENGTH(query) > 100  -- Filter out simple queries
+        ),
+        pattern_analysis AS (
+            SELECT 
+                normalized_query,
+                COUNT(*) as execution_count,
+                SUM(cost_usd) as total_cost_usd,
+                AVG(cost_usd) as avg_cost_per_execution,
+                SUM(tb_processed) as total_tb_processed,
+                AVG(duration_ms) as avg_duration_ms,
+                APPROX_TOP_COUNT(user_email, 3) as frequent_users,
+                MIN(creation_time) as first_execution,
+                MAX(creation_time) as last_execution
+            FROM query_patterns
+            GROUP BY normalized_query
+            HAVING COUNT(*) >= {min_repetition_count}
+        )
+        SELECT 
+            normalized_query,
+            execution_count,
+            total_cost_usd,
+            avg_cost_per_execution,
+            total_tb_processed,
+            avg_duration_ms,
+            frequent_users,
+            first_execution,
+            last_execution
+        FROM pattern_analysis
+        ORDER BY total_cost_usd DESC
+        LIMIT 10
+        """
+        
+        results = list(bq_client.query(query))
+        
+        materialized_view_candidates = []
+        total_potential_savings = 0
+        
+        for row in results:
+            # Calculate potential savings (materialized views can save 60-90% of costs for repeated queries)
+            savings_pct = 0.75  # Conservative 75% savings estimate
+            potential_savings = row.total_cost_usd * savings_pct
+            total_potential_savings += potential_savings
+            
+            # Calculate execution frequency
+            execution_frequency = row.execution_count / days
+            
+            candidate = {
+                "query_pattern": row.normalized_query[:500] + "..." if len(row.normalized_query) > 500 else row.normalized_query,
+                "execution_count": row.execution_count,
+                "total_cost_usd": round(row.total_cost_usd, 2),
+                "avg_cost_per_execution": round(row.avg_cost_per_execution, 2),
+                "total_tb_processed": round(row.total_tb_processed, 2),
+                "avg_duration_ms": round(row.avg_duration_ms, 0),
+                "frequent_users": [user.value for user in row.frequent_users],
+                "execution_frequency_per_day": round(execution_frequency, 1),
+                "potential_savings_usd": round(potential_savings, 2),
+                "roi_score": round(potential_savings / (row.avg_cost_per_execution * 0.1), 1),  # Rough ROI estimate
+                "priority": "HIGH" if potential_savings > 100 else "MEDIUM" if potential_savings > 50 else "LOW"
+            }
+            materialized_view_candidates.append(candidate)
+        
+        # Generate specific recommendations
+        recommendations = []
+        for candidate in materialized_view_candidates[:5]:  # Top 5 candidates
+            mv_name = f"mv_pattern_{hash(candidate['query_pattern'][:100]) % 10000}"
+            
+            recommendations.append({
+                "materialized_view_name": mv_name,
+                "priority": candidate["priority"],
+                "potential_savings_usd": candidate["potential_savings_usd"],
+                "execution_frequency": candidate["execution_frequency_per_day"],
+                "implementation_steps": [
+                    f"Create materialized view: {mv_name}",
+                    "Update queries to use the materialized view",
+                    "Set up automatic refresh schedule",
+                    "Monitor usage and cost savings"
+                ],
+                "refresh_strategy": "DAILY" if candidate["execution_frequency_per_day"] > 1 else "HOURLY",
+                "estimated_creation_cost": round(candidate["avg_cost_per_execution"] * 0.1, 2),
+                "break_even_executions": max(1, int(candidate["avg_cost_per_execution"] * 0.1 / (candidate["avg_cost_per_execution"] * 0.75)))
+            })
+        
+        return json.dumps({
+            "success": True,
+            "analysis_period": {
+                "days": days,
+                "min_repetition_count": min_repetition_count,
+                "min_cost_per_execution": min_cost_per_execution
+            },
+            "summary": {
+                "total_candidates": len(materialized_view_candidates),
+                "total_potential_savings": round(total_potential_savings, 2),
+                "avg_savings_per_view": round(total_potential_savings / len(materialized_view_candidates), 2) if materialized_view_candidates else 0,
+                "high_priority_views": len([c for c in materialized_view_candidates if c["priority"] == "HIGH"])
+            },
+            "materialized_view_candidates": materialized_view_candidates,
+            "implementation_recommendations": recommendations,
+            "generated_at": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
+
+
+def create_optimization_report_direct(
+    days: int = 7,
+    report_type: str = "executive"
+) -> str:
+    """
+    Generate comprehensive optimization report for different audiences.
+    """
+    try:
+        # Use default project and client
+        project_id = os.getenv('GOOGLE_CLOUD_PROJECT', 'gcp-wow-wiq-tsr-dev')
+        bq_client = setup_client(project_id)
+        
+        # Get comprehensive data for report
+        summary_query = f"""
+        WITH cost_analysis AS (
+            SELECT 
+                COUNT(*) as total_queries,
+                COUNT(DISTINCT user_email) as unique_users,
+                SUM(total_bytes_processed / POW(10, 12) * 6.25) as total_cost_usd,
+                AVG(total_bytes_processed / POW(10, 12) * 6.25) as avg_cost_per_query,
+                SUM(total_bytes_processed) / POW(10, 12) as total_tb_processed,
+                
+                -- Cost patterns
+                SUM(CASE WHEN total_bytes_processed / POW(10, 12) * 6.25 > 50 THEN 1 ELSE 0 END) as expensive_queries,
+                SUM(CASE WHEN query LIKE '%SELECT *%' THEN 1 ELSE 0 END) as select_star_queries,
+                SUM(CASE WHEN query NOT LIKE '%WHERE%' THEN 1 ELSE 0 END) as unfiltered_queries,
+                SUM(CASE WHEN NOT cache_hit THEN 1 ELSE 0 END) as uncached_queries,
+                
+                -- User patterns
+                SUM(CASE WHEN user_email LIKE '%gserviceaccount.com' THEN total_bytes_processed / POW(10, 12) * 6.25 ELSE 0 END) as service_account_cost,
+                SUM(CASE WHEN user_email NOT LIKE '%gserviceaccount.com' THEN total_bytes_processed / POW(10, 12) * 6.25 ELSE 0 END) as human_user_cost
+                
+            FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+                AND job_type = 'QUERY'
+                AND state = 'DONE'
+                AND error_result IS NULL
+                AND total_bytes_processed IS NOT NULL
+        )
+        SELECT * FROM cost_analysis
+        """
+        
+        results = list(bq_client.query(summary_query))
+        if not results:
+            return json.dumps({"error": "No data found for analysis period"})
+        
+        summary = results[0]
+        
+        # Calculate optimization potential
+        select_star_savings = (summary.select_star_queries / summary.total_queries) * summary.total_cost_usd * 0.4
+        filter_savings = (summary.unfiltered_queries / summary.total_queries) * summary.total_cost_usd * 0.6
+        cache_savings = (summary.uncached_queries / summary.total_queries) * summary.total_cost_usd * 0.2
+        
+        total_potential_savings = select_star_savings + filter_savings + cache_savings
+        
+        # Generate report based on audience
+        if report_type == "executive":
+            report_content = {
+                "report_title": f"BigQuery Cost Optimization Report - {days} Day Executive Summary",
+                "key_metrics": {
+                    "total_cost_usd": round(summary.total_cost_usd, 2),
+                    "monthly_projection_usd": round(summary.total_cost_usd * (30 / days), 2),
+                    "total_queries": summary.total_queries,
+                    "unique_users": summary.unique_users,
+                    "data_processed_tb": round(summary.total_tb_processed, 2)
+                },
+                "optimization_opportunities": {
+                    "immediate_savings_potential": round(total_potential_savings, 2),
+                    "monthly_savings_projection": round(total_potential_savings * (30 / days), 2),
+                    "roi_percentage": round((total_potential_savings / summary.total_cost_usd) * 100, 1),
+                    "top_opportunities": [
+                        f"Query filtering optimization: ${round(filter_savings, 2)} potential savings",
+                        f"Column selection optimization: ${round(select_star_savings, 2)} potential savings",
+                        f"Query caching improvements: ${round(cache_savings, 2)} potential savings"
+                    ]
+                },
+                "recommendations": [
+                    "Implement query optimization guidelines across teams",
+                    "Set up cost monitoring and alerts",
+                    "Train users on BigQuery best practices",
+                    "Consider automated query optimization tools"
+                ]
+            }
+            
+        elif report_type == "technical":
+            report_content = {
+                "report_title": f"BigQuery Technical Optimization Analysis - {days} Days",
+                "technical_metrics": {
+                    "total_cost_usd": round(summary.total_cost_usd, 2),
+                    "avg_cost_per_query": round(summary.avg_cost_per_query, 4),
+                    "total_data_processed_tb": round(summary.total_tb_processed, 2),
+                    "expensive_queries_count": summary.expensive_queries,
+                    "expensive_queries_pct": round((summary.expensive_queries / summary.total_queries) * 100, 1)
+                },
+                "optimization_analysis": {
+                    "select_star_issues": {
+                        "count": summary.select_star_queries,
+                        "percentage": round((summary.select_star_queries / summary.total_queries) * 100, 1),
+                        "potential_savings": round(select_star_savings, 2)
+                    },
+                    "filtering_issues": {
+                        "count": summary.unfiltered_queries,
+                        "percentage": round((summary.unfiltered_queries / summary.total_queries) * 100, 1),
+                        "potential_savings": round(filter_savings, 2)
+                    },
+                    "caching_issues": {
+                        "count": summary.uncached_queries,
+                        "percentage": round((summary.uncached_queries / summary.total_queries) * 100, 1),
+                        "potential_savings": round(cache_savings, 2)
+                    }
+                },
+                "implementation_priorities": [
+                    "HIGH: Implement partition filtering on expensive queries",
+                    "HIGH: Replace SELECT * with specific columns",
+                    "MEDIUM: Enable query result caching",
+                    "MEDIUM: Optimize JOIN operations",
+                    "LOW: Implement LIMIT clauses where appropriate"
+                ]
+            }
+            
+        else:  # stakeholder
+            report_content = {
+                "report_title": f"BigQuery Cost & Usage Report - {days} Day Stakeholder Summary",
+                "business_impact": {
+                    "current_monthly_cost": round(summary.total_cost_usd * (30 / days), 2),
+                    "cost_per_user": round(summary.total_cost_usd / summary.unique_users, 2),
+                    "queries_per_day": round(summary.total_queries / days, 0),
+                    "service_vs_human_cost": {
+                        "automated_processes": round(summary.service_account_cost, 2),
+                        "human_users": round(summary.human_user_cost, 2)
+                    }
+                },
+                "cost_optimization_summary": {
+                    "optimization_potential": round(total_potential_savings, 2),
+                    "percentage_improvement": round((total_potential_savings / summary.total_cost_usd) * 100, 1),
+                    "monthly_savings_target": round(total_potential_savings * (30 / days), 2)
+                },
+                "action_items": [
+                    "Review and approve optimization initiatives",
+                    "Allocate resources for query optimization training",
+                    "Implement cost governance policies",
+                    "Set up regular cost review meetings"
+                ]
+            }
+        
+        report_content.update({
+            "report_metadata": {
+                "analysis_period": f"{days} days",
+                "report_type": report_type,
+                "generated_at": datetime.now().isoformat(),
+                "project_id": project_id
+            }
+        })
+        
+        return json.dumps({
+            "success": True,
+            "report": report_content,
+            "raw_metrics": {
+                "total_queries": summary.total_queries,
+                "total_cost_usd": round(summary.total_cost_usd, 2),
+                "total_potential_savings": round(total_potential_savings, 2)
+            }
         }, indent=2)
         
     except Exception as e:
