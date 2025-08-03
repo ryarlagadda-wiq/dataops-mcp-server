@@ -10,25 +10,46 @@ import json
 import sys
 import os
 
-# Add the source directory to the path  
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+# Add the source directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src', 'dataops-mcp-server'))
 
 async def run_get_costs(args):
     """Run BigQuery cost analysis."""
     try:
-        from tools.bigquery_wrapper import get_cost_summary_direct, get_daily_costs_direct
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+        from tools.bigquery_wrapper import get_cost_summary, get_daily_costs
         
         # Use the appropriate function based on options
         if args.details:
-            result = get_cost_summary_direct(args.project, days=args.days)
+            result = get_cost_summary(args.project, days=args.days)
         else:
-            result = get_daily_costs_direct(args.project, days=args.days)
+            result = get_daily_costs(args.project, days=args.days)
         
         print("✅ BigQuery Cost Analysis Results:")
         print(result)
         
     except Exception as e:
         print(f"❌ Failed to run cost analysis: {e}")
+
+async def run_service_account_analysis(args):
+    """Run service account cost analysis."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+        from tools.bigquery_wrapper import bigquery_cost_analyzer
+        
+        result = bigquery_cost_analyzer(
+            project_id=args.project,
+            days=args.days,
+            service_account_filter=args.filter or "",
+            include_query_text=args.include_queries,
+            min_cost_threshold=args.min_cost
+        )
+        
+        print("🔍 Service Account Analysis Results:")
+        print(result)
+        
+    except Exception as e:
+        print(f"❌ Failed to run service account analysis: {e}")
 
 async def run_analyze_query(args):
     """Run query cost analysis."""
@@ -45,9 +66,10 @@ async def run_analyze_query(args):
 async def run_health_check(args):
     """Run health check on tools."""
     try:
-        from tools.bigquery_wrapper import health_check_direct
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server'))
+        from tools.bigquery_wrapper import health_check
         
-        result = health_check_direct(args.project)
+        result = health_check(args.project)
         print("🏥 Health Check Results:")
         print(result)
         
@@ -67,6 +89,13 @@ def main():
     costs_parser.add_argument("--predictions", action="store_true", help="Include cost predictions")
     costs_parser.add_argument("--group-by", help="Grouping dimensions (comma-separated)")
     costs_parser.add_argument("--details", action="store_true", help="Include query details")
+    
+    # Service account analysis tool
+    sa_parser = subparsers.add_parser("service-accounts", help="Analyze service account costs")
+    sa_parser.add_argument("--days", type=int, default=7, help="Number of days to analyze")
+    sa_parser.add_argument("--filter", help="Service account email filter (partial match)")
+    sa_parser.add_argument("--include-queries", action="store_true", help="Include query text in results")
+    sa_parser.add_argument("--min-cost", type=float, default=0.0, help="Minimum cost threshold")
     
     # Query analysis tool
     query_parser = subparsers.add_parser("query", help="Analyze query cost")
@@ -89,6 +118,8 @@ def main():
     try:
         if args.tool == "costs":
             asyncio.run(run_get_costs(args))
+        elif args.tool == "service-accounts":
+            asyncio.run(run_service_account_analysis(args))
         elif args.tool == "query":
             asyncio.run(run_analyze_query(args))
         elif args.tool == "health":
