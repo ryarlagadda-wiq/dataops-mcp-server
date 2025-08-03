@@ -16,19 +16,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dataops-mcp-server')
 async def run_get_costs(args):
     """Run BigQuery cost analysis."""
     try:
-        from tools.bigquery_tools import GetBigQueryCostsTool
+        from tools.bigquery_wrapper import get_cost_summary_direct, get_daily_costs_direct
         
-        tool = GetBigQueryCostsTool(project_id=args.project)
-        result = await tool.execute(
-            days=args.days,
-            include_predictions=args.predictions,
-            group_by=args.group_by.split(',') if args.group_by else ['date'],
-            include_query_details=args.details
-        )
+        # Use the appropriate function based on options
+        if args.details:
+            result = get_cost_summary_direct(args.project, days=args.days)
+        else:
+            result = get_daily_costs_direct(args.project, days=args.days)
         
         print("✅ BigQuery Cost Analysis Results:")
-        data = json.loads(result)
-        print(json.dumps(data, indent=2))
+        print(result)
         
     except Exception as e:
         print(f"❌ Failed to run cost analysis: {e}")
@@ -36,18 +33,11 @@ async def run_get_costs(args):
 async def run_analyze_query(args):
     """Run query cost analysis."""
     try:
-        from tools.cost_analysis_tools import AnalyzeQueryCostTool
-        
-        tool = AnalyzeQueryCostTool(project_id=args.project)
-        result = await tool.execute(
-            sql=args.sql,
-            include_optimization=args.optimize,
-            optimization_model="pattern_based"
-        )
-        
-        print("✅ Query Analysis Results:")
-        data = json.loads(result)
-        print(json.dumps(data, indent=2))
+        print("❌ Query analysis not available in FastMCP version")
+        print("Use the basic cost analysis tools instead:")
+        print("  - get_daily_costs")
+        print("  - get_top_users") 
+        print("  - get_cost_summary")
         
     except Exception as e:
         print(f"❌ Failed to analyze query: {e}")
@@ -55,12 +45,11 @@ async def run_analyze_query(args):
 async def run_health_check(args):
     """Run health check on tools."""
     try:
-        from tools.bigquery_tools import GetBigQueryCostsTool
+        from tools.bigquery_wrapper import health_check_direct
         
-        tool = GetBigQueryCostsTool(project_id=args.project)
-        is_healthy = await tool.health_check()
-        
-        print(f"🏥 Health Check: {'✅ Healthy' if is_healthy else '❌ Unhealthy'}")
+        result = health_check_direct(args.project)
+        print("🏥 Health Check Results:")
+        print(result)
         
     except Exception as e:
         print(f"❌ Health check failed: {e}")

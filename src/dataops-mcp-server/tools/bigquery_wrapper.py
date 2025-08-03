@@ -1,43 +1,28 @@
 #!/usr/bin/env python3
-
 """
-Simple BigQuery Cost Analysis MCP Server
-Provides basic BigQuery cost analysis tools for AI assistants.
+BigQuery Tools Wrapper - Provides direct access to FastMCP functions
 """
 
 import os
 import json
 from datetime import datetime, timedelta
-from typing import Optional
-
-from fastmcp import FastMCP
 from google.cloud import bigquery
 
-# Initialize MCP server
-mcp = FastMCP("BigQuery Cost Analyzer")
+def setup_client(project_id: str):
+    """Setup BigQuery client with project ID"""
+    os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
+    return bigquery.Client(project=project_id)
 
-# Initialize BigQuery client
-project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-if not project_id:
-    raise ValueError("GOOGLE_CLOUD_PROJECT environment variable is required")
-
-bq_client = bigquery.Client(project=project_id)
-
-@mcp.tool()
-def get_daily_costs(days: int = 7) -> str:
+def get_daily_costs_direct(project_id: str, days: int = 7) -> str:
     """
     Get daily BigQuery costs for the specified number of days.
-    
-    Args:
-        days: Number of days to analyze (1-30, default: 7)
-    
-    Returns:
-        JSON string with daily cost breakdown
     """
     if not 1 <= days <= 30:
         return json.dumps({"error": "Days must be between 1 and 30"})
     
     try:
+        bq_client = setup_client(project_id)
+        
         query = f"""
         SELECT 
             DATE(creation_time) as date,
@@ -84,87 +69,58 @@ def get_daily_costs(days: int = 7) -> str:
             "suggestion": "Check project permissions and ensure BigQuery has been used recently"
         })
 
-@mcp.tool()
-def get_top_users(days: int = 7, limit: int = 10) -> str:
+def health_check_direct(project_id: str) -> str:
     """
-    Get top BigQuery users by cost over the specified period.
-    
-    Args:
-        days: Number of days to analyze (1-30, default: 7)
-        limit: Maximum number of users to return (1-50, default: 10)
-    
-    Returns:
-        JSON string with top users by cost
+    Check if the BigQuery cost analyzer can access the project successfully.
     """
-    if not 1 <= days <= 30:
-        return json.dumps({"error": "Days must be between 1 and 30"})
-    
-    if not 1 <= limit <= 50:
-        return json.dumps({"error": "Limit must be between 1 and 50"})
-    
     try:
-        query = f"""
-        SELECT 
-            user_email,
-            COUNT(*) as query_count,
-            SUM(total_bytes_processed) / POW(10, 12) * 6.25 as cost_usd,
-            ROUND(AVG(TIMESTAMP_DIFF(end_time, start_time, MILLISECOND)), 2) as avg_duration_ms
+        bq_client = setup_client(project_id)
+        
+        # Test basic BigQuery access
+        test_query = "SELECT 1 as test"
+        job_config = bigquery.QueryJobConfig(dry_run=True)
+        bq_client.query(test_query, job_config=job_config)
+        
+        # Test INFORMATION_SCHEMA access
+        schema_query = f"""
+        SELECT COUNT(*) as job_count
         FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-        WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
-            AND job_type = 'QUERY'
-            AND state = 'DONE'
-            AND error_result IS NULL
-            AND total_bytes_processed IS NOT NULL
-            AND user_email IS NOT NULL
-        GROUP BY user_email
-        ORDER BY cost_usd DESC
-        LIMIT {limit}
+        WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
+        LIMIT 1
         """
-        
-        results = list(bq_client.query(query))
-        
-        top_users = []
-        total_cost = 0
-        
-        for row in results:
-            user_entry = {
-                "user_email": row.user_email,
-                "query_count": int(row.query_count),
-                "cost_usd": round(float(row.cost_usd or 0), 2),
-                "avg_duration_ms": float(row.avg_duration_ms or 0)
-            }
-            top_users.append(user_entry)
-            total_cost += user_entry["cost_usd"]
+        job_config = bigquery.QueryJobConfig(dry_run=True)
+        bq_client.query(schema_query, job_config=job_config)
         
         return json.dumps({
             "success": True,
+            "status": "healthy",
             "project_id": project_id,
-            "period_days": days,
-            "total_analyzed_cost": round(total_cost, 2),
-            "top_users": top_users
-        }, indent=2)
+            "message": "BigQuery access confirmed",
+            "timestamp": datetime.now().isoformat()
+        })
         
     except Exception as e:
         return json.dumps({
             "success": False,
-            "error": str(e)
+            "status": "unhealthy",
+            "error": str(e),
+            "suggestions": [
+                "Check GOOGLE_APPLICATION_CREDENTIALS environment variable",
+                "Verify BigQuery API is enabled",
+                "Ensure proper IAM permissions (bigquery.jobs.listAll)"
+            ]
         })
 
-@mcp.tool()
-def get_cost_summary(days: int = 7) -> str:
+def get_cost_summary_direct(project_id: str, days: int = 7) -> str:
     """
     Get a comprehensive cost summary for BigQuery usage.
-    
-    Args:
-        days: Number of days to analyze (1-30, default: 7)
-    
-    Returns:
-        JSON string with cost summary and insights
     """
     if not 1 <= days <= 30:
         return json.dumps({"error": "Days must be between 1 and 30"})
     
     try:
+        bq_client = setup_client(project_id)
+        
         # Get basic stats
         summary_query = f"""
         SELECT 
@@ -235,50 +191,3 @@ def get_cost_summary(days: int = 7) -> str:
             "success": False,
             "error": str(e)
         })
-
-@mcp.tool()
-def health_check() -> str:
-    """
-    Check if the BigQuery cost analyzer can access the project successfully.
-    
-    Returns:
-        JSON string with health status
-    """
-    try:
-        # Test basic BigQuery access
-        test_query = "SELECT 1 as test"
-        job_config = bigquery.QueryJobConfig(dry_run=True)
-        bq_client.query(test_query, job_config=job_config)
-        
-        # Test INFORMATION_SCHEMA access
-        schema_query = f"""
-        SELECT COUNT(*) as job_count
-        FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-        WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
-        LIMIT 1
-        """
-        job_config = bigquery.QueryJobConfig(dry_run=True)
-        bq_client.query(schema_query, job_config=job_config)
-        
-        return json.dumps({
-            "success": True,
-            "status": "healthy",
-            "project_id": project_id,
-            "message": "BigQuery access confirmed",
-            "timestamp": datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return json.dumps({
-            "success": False,
-            "status": "unhealthy",
-            "error": str(e),
-            "suggestions": [
-                "Check GOOGLE_APPLICATION_CREDENTIALS environment variable",
-                "Verify BigQuery API is enabled",
-                "Ensure proper IAM permissions (bigquery.jobs.listAll)"
-            ]
-        })
-
-if __name__ == "__main__":
-    mcp.run()
