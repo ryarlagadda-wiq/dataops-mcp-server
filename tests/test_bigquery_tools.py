@@ -13,14 +13,15 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 # Add the source directory to the path so we can import the tools
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Updated to match the actual directory structure with hyphens
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'dataops-mcp-server'))
 
 def test_bigquery_import():
     """Test if we can import the BigQuery tools."""
     print("🔍 Testing BigQuery Tools Import...")
     
     try:
-        from src.dataops_mcp_server.tools.bigquery_tools import GetBigQueryCostsTool
+        from tools.bigquery_tools import GetBigQueryCostsTool
         print("✅ Successfully imported GetBigQueryCostsTool")
         return True
     except ImportError as e:
@@ -33,7 +34,7 @@ async def test_bigquery_tools_functionality():
     print("\n💰 Testing BigQuery Tools Functionality...")
     
     try:
-        from src.dataops_mcp_server.tools.bigquery_tools import GetBigQueryCostsTool
+        from tools.bigquery_tools import GetBigQueryCostsTool
         
         # Initialize the tool with a test project
         # Note: This won't actually connect to GCP without proper auth
