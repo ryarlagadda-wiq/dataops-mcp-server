@@ -28,17 +28,6 @@ class QueryConfig:
     include_query_text: bool = False
     min_cost_threshold: float = 0.0
     limit: int = 10
-    
-    def __post_init__(self):
-        """Validate configuration parameters."""
-        if not (1 <= self.days <= 30):
-            raise ValueError("Days must be between 1 and 30")
-        if not (1 <= self.limit <= 50):
-            raise ValueError("Limit must be between 1 and 50")
-        if self.min_cost_threshold < 0:
-            raise ValueError("Cost threshold must be non-negative")
-        if not self.project_id:
-            raise ValueError("Project ID cannot be empty")
 
 
 @dataclass
@@ -59,19 +48,6 @@ class BigQueryAnalyzer:
         self.project_id = project_id
         self.client = bigquery.Client(project=project_id)
         self.executor = ThreadPoolExecutor(max_workers=3)
-    
-    def __enter__(self):
-        """Context manager entry."""
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit with cleanup."""
-        self.cleanup()
-    
-    def cleanup(self):
-        """Clean up resources."""
-        if hasattr(self, 'executor'):
-            self.executor.shutdown(wait=True)
     
     # SQL Query Templates
     BASE_WHERE_CLAUSE = """
@@ -104,14 +80,17 @@ class BigQueryAnalyzer:
             return f"{self.COST_CALCULATION} >= {config.min_cost_threshold}"
         return ""
     
-    def _execute_query(self, query: str) -> List[Any]:
-        """Execute BigQuery query."""
-        return list(self.client.query(query))
-    
     async def _execute_query_async(self, query: str) -> List[Any]:
-        """Execute BigQuery asynchronously using thread executor."""
+        """Execute BigQuery asynchronously."""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self.executor, self._execute_query, query)
+        return await loop.run_in_executor(
+            self.executor, 
+            lambda: list(self.client.query(query))
+        )
+    
+    def _execute_query_sync(self, query: str) -> List[Any]:
+        """Execute BigQuery synchronously."""
+        return list(self.client.query(query))
     
     def _build_daily_costs_query(self, config: QueryConfig) -> str:
         """Build optimized daily costs query."""
@@ -185,44 +164,22 @@ class BigQueryAnalyzer:
         
         return daily_costs, total_cost
     
-    def _process_results(self, results: List[Any], 
-                               field_mapping: Dict[str, str]) -> Tuple[List[Dict], float]:
-        processed_results = []
+    def _process_top_users_results(self, results: List[Any]) -> Tuple[List[Dict], float]:
+        """Process top users query results."""
+        top_users = []
         total_cost = 0
         
         for row in results:
-            entry = {}
-            for output_field, input_field in field_mapping.items():
-                value = getattr(row, input_field, 0)
-                
-                # Apply type conversions and formatting
-                if output_field.endswith('_usd') or output_field == 'cost_usd':
-                    value = round(float(value or 0), 2)
-                    total_cost += value
-                elif output_field.endswith('_count') or output_field in ['query_count']:
-                    value = int(value or 0)
-                elif output_field.endswith('_ms'):
-                    value = float(value or 0)
-                elif output_field == 'date':
-                    value = value.isoformat() if hasattr(value, 'isoformat') else str(value)
-                else:
-                    value = str(value) if value is not None else ""
-                
-                entry[output_field] = value
-            
-            processed_results.append(entry)
+            user_entry = {
+                "user_email": row.user_email,
+                "query_count": int(row.query_count),
+                "cost_usd": round(float(row.cost_usd or 0), 2),
+                "avg_duration_ms": float(row.avg_duration_ms or 0)
+            }
+            top_users.append(user_entry)
+            total_cost += user_entry["cost_usd"]
         
-        return processed_results, total_cost
-    
-    def _process_top_users_results(self, results: List[Any]) -> Tuple[List[Dict], float]:
-        """Process top users query results."""
-        field_mapping = {
-            "user_email": "user_email",
-            "query_count": "query_count",
-            "cost_usd": "cost_usd", 
-            "avg_duration_ms": "avg_duration_ms"
-        }
-        return self._process_results_generic(results, field_mapping)
+        return top_users, total_cost
     
     def _generate_cost_insights(self, metrics: CostMetrics, config: QueryConfig) -> List[str]:
         """Generate intelligent cost insights."""
@@ -266,7 +223,7 @@ class BigQueryAnalyzer:
     def get_daily_costs_sync(self, config: QueryConfig) -> Dict[str, Any]:
         """Get daily costs synchronously."""
         query = self._build_daily_costs_query(config)
-        results = self._execute_query(query)
+        results = self._execute_query_sync(query)
         daily_costs, total_cost = self._process_daily_costs_results(results)
         
         return {
@@ -294,7 +251,7 @@ class BigQueryAnalyzer:
     def get_top_users_sync(self, config: QueryConfig) -> Dict[str, Any]:
         """Get top users synchronously."""
         query = self._build_top_users_query(config)
-        results = self._execute_query(query)
+        results = self._execute_query_sync(query)
         top_users, total_cost = self._process_top_users_results(results)
         
         return {
@@ -308,7 +265,7 @@ class BigQueryAnalyzer:
     def get_cost_summary_sync(self, config: QueryConfig) -> Dict[str, Any]:
         """Get comprehensive cost summary."""
         query = self._build_cost_summary_query(config)
-        results = self._execute_query(query)
+        results = self._execute_query_sync(query)
         result = results[0]
         
         metrics = CostMetrics(
@@ -430,6 +387,9 @@ mcp = FastMCP("BigQuery Cost Analyzer")
 @handle_bigquery_errors
 def get_daily_costs(days: int = 7) -> str:
     """Get daily BigQuery costs for the specified number of days."""
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    
     config = QueryConfig(days=days, project_id=project_id)
     result = analyzer.get_daily_costs_sync(config)
     return json.dumps(result, indent=2)
@@ -439,6 +399,9 @@ def get_daily_costs(days: int = 7) -> str:
 @handle_bigquery_errors_async
 async def get_daily_costs_async(days: int = 7) -> str:
     """Get daily BigQuery costs asynchronously."""
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    
     config = QueryConfig(days=days, project_id=project_id)
     result = await analyzer.get_daily_costs_async(config)
     return json.dumps(result, indent=2)
@@ -448,6 +411,11 @@ async def get_daily_costs_async(days: int = 7) -> str:
 @handle_bigquery_errors
 def get_top_users(days: int = 7, limit: int = 10) -> str:
     """Get top BigQuery users by cost over the specified period."""
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    if not 1 <= limit <= 50:
+        return json.dumps({"error": "Limit must be between 1 and 50"})
+    
     config = QueryConfig(days=days, project_id=project_id, limit=limit)
     result = analyzer.get_top_users_sync(config)
     return json.dumps(result, indent=2)
@@ -457,6 +425,11 @@ def get_top_users(days: int = 7, limit: int = 10) -> str:
 @handle_bigquery_errors_async
 async def get_top_users_async(days: int = 7, limit: int = 10) -> str:
     """Get top BigQuery users asynchronously."""
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    if not 1 <= limit <= 50:
+        return json.dumps({"error": "Limit must be between 1 and 50"})
+    
     config = QueryConfig(days=days, project_id=project_id, limit=limit)
     result = await analyzer.get_top_users_async(config)
     return json.dumps(result, indent=2)
@@ -466,6 +439,9 @@ async def get_top_users_async(days: int = 7, limit: int = 10) -> str:
 @handle_bigquery_errors
 def get_cost_summary(days: int = 7) -> str:
     """Get a comprehensive cost summary for BigQuery usage."""
+    if not 1 <= days <= 30:
+        return json.dumps({"error": "Days must be between 1 and 30"})
+    
     config = QueryConfig(days=days, project_id=project_id)
     result = analyzer.get_cost_summary_sync(config)
     return json.dumps(result, indent=2)
@@ -480,7 +456,4 @@ def health_check() -> str:
 
 
 if __name__ == "__main__":
-    try:
-        mcp.run()
-    finally:
-        analyzer.cleanup()
+    mcp.run()
